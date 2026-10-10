@@ -1,12 +1,14 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
 import Loader from '../../components/Loader'
+import { useEvento } from '../../eventi/eventoContext'
 import { messaggioErroreFirestore } from '../shared/raccolta'
 import { comprimiFoto } from './foto'
-import { euro, PRESENTATORE, STORIA_MAX, VALORE_MAX, type Oggetto } from './types'
+import { euro, STORIA_MAX, VALORE_MAX, type Oggetto } from './types'
 import { useOggetti } from './useOggetti'
 
 export default function OggettiPanel() {
-  const { oggetti, caricamento, errore, aggiungi, modifica, elimina, sposta } = useOggetti()
+  const { evento } = useEvento()
+  const { oggetti, caricamento, errore, aggiungi, modifica, elimina, sposta } = useOggetti(evento.id)
   const [inModifica, setInModifica] = useState<string | null>(null)
   const [nome, setNome] = useState('')
   const [storia, setStoria] = useState('')
@@ -72,7 +74,7 @@ export default function OggettiPanel() {
 
   return (
     <section className="card p-5 sm:p-6">
-      <h2 className="mb-1 text-2xl font-semibold text-bordeaux-800">Gli oggetti</h2>
+      <h2 className="mb-1 text-2xl font-semibold text-primario-800">Gli oggetti</h2>
       <p className="mb-5 text-sm text-inchiostro/60">
         La valutazione vera resta qui: non viene mai inviata ai telefoni degli invitati finché non
         la riveli tu.
@@ -112,14 +114,16 @@ export default function OggettiPanel() {
 
         <div>
           <label htmlFor="storia-oggetto" className="field-label">
-            La storia che racconta {PRESENTATORE}
+            {evento.presentatore
+              ? `La storia che racconta ${evento.presentatore}`
+              : 'La storia dell’oggetto'}
           </label>
           <textarea
             id="storia-oggetto"
             className="field min-h-32 resize-y"
             value={storia}
             onChange={(e) => setStoria(e.target.value)}
-            placeholder="Scritta in prima persona: comparirà nel suo fumetto sulla proiezione…"
+            placeholder="Comparirà nel fumetto sulla proiezione mentre gli invitati puntano…"
             maxLength={STORIA_MAX}
           />
           <p className="mt-1 text-right text-xs text-inchiostro/45">
@@ -196,7 +200,7 @@ export default function OggettiPanel() {
               )}
 
               <div className="min-w-0 flex-1">
-                <p className="font-semibold text-bordeaux-800">{oggetto.nome}</p>
+                <p className="font-semibold text-primario-800">{oggetto.nome}</p>
                 <p className="text-sm font-semibold text-oro-600">{euro(oggetto.valore)}</p>
                 {oggetto.storia && (
                   <p className="mt-0.5 line-clamp-2 text-xs text-inchiostro/60">{oggetto.storia}</p>

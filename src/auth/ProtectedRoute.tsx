@@ -3,7 +3,7 @@ import Loader from '../components/Loader'
 import { useAuth } from './authContext'
 
 export default function ProtectedRoute() {
-  const { user, loading, isAnonimo } = useAuth()
+  const { user, loading } = useAuth()
   const location = useLocation()
 
   if (loading) {
@@ -14,13 +14,9 @@ export default function ProtectedRoute() {
     )
   }
 
-  // gli ospiti entrati dal QR restano nel loro gioco: il resto del sito
-  // richiede utente e password
-  if (user && isAnonimo) {
-    return <Navigate to="/gioca" replace />
-  }
-
-  if (!user) {
+  // gli invitati che giocano dal QR usano un'identita' a parte (vedi
+  // cashorsara/istanzaGioco.ts): qui serve sempre utente e password
+  if (!user || user.isAnonymous) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
 

@@ -1,8 +1,8 @@
 import { FirebaseError } from 'firebase/app'
 import { useState, type FormEvent } from 'react'
-import { Navigate } from 'react-router-dom'
-import Tocco from '../components/Tocco'
-import { CORSO_DI_LAUREA, FESTEGGIATA, SOTTOTITOLO_SITO, TITOLO_SITO } from '../config'
+import { Navigate, useLocation } from 'react-router-dom'
+import IconaEvento from '../components/IconaEvento'
+import { NOME_SITO, SOTTOTITOLO_SITO } from '../config'
 import { useAuth } from './authContext'
 
 function messaggioErrore(errore: unknown): string {
@@ -29,12 +29,18 @@ function messaggioErrore(errore: unknown): string {
 
 export default function LoginPage() {
   const { user, loading, login } = useAuth()
+  const location = useLocation()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [errore, setErrore] = useState<string | null>(null)
   const [inCorso, setInCorso] = useState(false)
 
-  if (!loading && user) return <Navigate to="/" replace />
+  if (!loading && user && !user.isAnonymous) {
+    // si torna alla pagina che si voleva aprire, altrimenti la home decide
+    // dove mandare l'utente in base al suo ruolo
+    const da = (location.state as { from?: string } | null)?.from
+    return <Navigate to={da && da !== '/login' ? da : '/'} replace />
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -57,8 +63,8 @@ export default function LoginPage() {
     <div className="flex min-h-screen flex-col justify-center bg-crema-100 px-4 py-10">
       <div className="mx-auto w-full max-w-sm">
         <div className="mb-8 text-center">
-          <Tocco className="mx-auto mb-4 h-12 w-16 text-bordeaux-700" />
-          <h1 className="text-3xl font-semibold text-bordeaux-800 sm:text-4xl">{TITOLO_SITO}</h1>
+          <IconaEvento tipo={null} className="mx-auto mb-4 h-12 w-16 text-primario-700" />
+          <h1 className="text-3xl font-semibold text-primario-800 sm:text-4xl">{NOME_SITO}</h1>
           <p className="mt-1 text-sm text-inchiostro/60">{SOTTOTITOLO_SITO}</p>
         </div>
 
@@ -74,7 +80,7 @@ export default function LoginPage() {
               autoComplete="username"
               autoCapitalize="none"
               spellCheck={false}
-              placeholder="es. ospiti"
+              placeholder="es. sara25-ospiti"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
@@ -109,10 +115,6 @@ export default function LoginPage() {
             Usa il nome utente e la password che ti sono stati dati nell'invito.
           </p>
         </form>
-
-        <p className="mt-8 text-center text-xs text-inchiostro/45">
-          {FESTEGGIATA} · {CORSO_DI_LAUREA}
-        </p>
       </div>
     </div>
   )

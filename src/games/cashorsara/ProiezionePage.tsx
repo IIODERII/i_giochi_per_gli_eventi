@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { useAuth } from '../../auth/authContext'
-import { FESTEGGIATA } from '../../config'
+import { useEvento } from '../../eventi/eventoContext'
+import { nomiBrevi, titoloGioco } from '../../eventi/types'
 import {
   apriOggetto,
   caricaOggetti,
@@ -12,14 +12,16 @@ import {
 import Fumetto from './Fumetto'
 import { classifica, esitiTurno } from './punteggi'
 import Qr from './Qr'
-import { euro, FOTO_PRESENTATORE, PRESENTATORE, TITOLO_GIOCO, type Partita } from './types'
-import { indirizzoGioco, usePartita } from './usePartita'
+import { indirizzoGioco } from './riferimenti'
+import { euro, type Giocatore, type Partita, type Risposta } from './types'
+import { useFotoPresentatore } from './useFotoPresentatore'
+import { usePartita } from './usePartita'
 
 /**
- * Alessandro Rosa a tutta altezza sul lato sinistro: e' lui che "parla" nei
- * fumetti. Se la foto non e' ancora in public/cashorsara/ la colonna sparisce.
+ * Il presentatore a tutta altezza sul lato sinistro: e' lui che "parla" nei
+ * fumetti. Senza foto (o se non si carica) la colonna sparisce.
  */
-function Presentatore() {
+function Presentatore({ nome, foto }: { nome: string; foto: string }) {
   const [mancante, setMancante] = useState(false)
   if (mancante) return null
 
@@ -28,16 +30,25 @@ function Presentatore() {
     // deborda dalla colonna, a sinistra fuori schermo e a destra sotto il fumetto
     <aside className="relative hidden h-screen w-[30vw] max-w-160 shrink-0 md:block">
       <img
-        src={FOTO_PRESENTATORE}
-        alt={PRESENTATORE}
+        src={foto}
+        alt={nome}
         onError={() => setMancante(true)}
         className="absolute bottom-0 left-1/2 h-full w-auto max-w-none -translate-x-1/2 drop-shadow-2xl"
       />
-      <p className="absolute bottom-6 left-6 rounded-full bg-bordeaux-900/85 px-6 py-2 font-display text-4xl font-semibold text-oro-300">
-        {PRESENTATORE}
-      </p>
+      {nome && (
+        <p className="absolute bottom-6 left-6 rounded-full bg-primario-900/85 px-6 py-2 font-display text-4xl font-semibold text-oro-300">
+          {nome}
+        </p>
+      )}
     </aside>
   )
+}
+
+interface PropsBarra {
+  eventoId: string
+  partita: Partita
+  risposte: Risposta[]
+  giocatori: Giocatore[]
 }
 
 /**
@@ -46,7 +57,7 @@ function Presentatore() {
  * mentre qui compaiono solo i pulsanti. Il valore da rivelare viene letto al
  * volo dal database e non finisce mai in pagina.
  */
-function BarraComandi({ partita }: { partita: Partita }) {
+function BarraComandi({ eventoId, partita, risposte, giocatori }: PropsBarra) {
   const [inCorso, setInCorso] = useState(false)
   const ultimo = partita.indice >= partita.totale - 1
 
@@ -66,14 +77,15 @@ function BarraComandi({ partita }: { partita: Partita }) {
   async function avanti() {
     setInCorso(true)
     try {
-      const oggetti = await caricaOggetti()
-      if (partita.stato === 'attesa') await apriOggetto(oggetti, 0)
-      else if (partita.stato === 'puntate') await chiudiPuntate()
+      const oggetti = await caricaOggetti(eventoId)
+      if (partita.stato === 'attesa') await apriOggetto(eventoId, oggetti, 0)
+      else if (partita.stato === 'puntate') await chiudiPuntate(eventoId)
       else if (partita.stato === 'chiuse') {
-        await rivelaValore(partita.indice, oggetti[partita.indice]?.valore ?? 0)
+        const valore = oggetti[partita.indice]?.valore ?? 0
+        await rivelaValore(eventoId, partita, valore, risposte, giocatori)
       } else if (partita.stato === 'rivelato') {
-        if (ultimo) await terminaPartita()
-        else await apriOggetto(oggetti, partita.indice + 1)
+        if (ultimo) await terminaPartita(eventoId)
+        else await apriOggetto(eventoId, oggetti, partita.indice + 1)
       }
     } finally {
       setInCorso(false)
@@ -87,7 +99,7 @@ function BarraComandi({ partita }: { partita: Partita }) {
       <button
         onClick={avanti}
         disabled={inCorso}
-        className="rounded-full bg-oro-400/90 px-6 py-3 text-lg font-semibold text-bordeaux-900
+        className="rounded-full bg-oro-400/90 px-6 py-3 text-lg font-semibold text-primario-900
                    shadow-lg transition hover:bg-oro-300 disabled:opacity-50"
       >
         {inCorso ? '…' : etichetta}
@@ -95,9 +107,15 @@ function BarraComandi({ partita }: { partita: Partita }) {
     </div>
   )
 }
+
 export default function ProiezionePage() {
-  const { isAdmin } = useAuth()
-  const { partita, giocatori, risposte, risposteDelTurno } = usePartita()
+  const { evento, isAdmin, percorso } = useEvento()
+  const eventoId = evento.id
+  const { partita, foto, giocatori, risposte, risposteDelTurno } = usePartita(eventoId)
+  const { foto: fotoPresentatore } = useFotoPresentatore(eventoId)
+  const titolo = titoloGioco(evento, 'cashorsara')
+  const nome = nomiBrevi(evento)
+  const conPresentatore = Boolean(fotoPresentatore)
 
   // il valore vero arriva solo dopo la rivelazione: su questo schermo non
   // esiste nessuna copia anticipata della valutazione
@@ -111,15 +129,20 @@ export default function ProiezionePage() {
     [risposte, partita.valoriRivelati, giocatori],
   )
 
-  if (!isAdmin) return <Navigate to="/" replace />
+  if (!isAdmin) return <Navigate to={percorso()} replace />
 
   return (
-    <div className="flex h-screen overflow-hidden bg-bordeaux-900 text-crema-50">
-      <BarraComandi partita={partita} />
-      <Presentatore />
+    <div className="flex h-screen overflow-hidden bg-primario-900 text-crema-50">
+      <BarraComandi
+        eventoId={eventoId}
+        partita={partita}
+        risposte={risposte}
+        giocatori={giocatori}
+      />
+      {fotoPresentatore && <Presentatore nome={evento.presentatore} foto={fotoPresentatore} />}
       <main className="relative z-10 flex min-w-0 flex-1 flex-col overflow-y-auto px-8 py-8">
         <header className="mb-6 flex shrink-0 items-baseline justify-between">
-          <h1 className="font-display text-4xl font-semibold text-oro-300">{TITOLO_GIOCO}</h1>
+          <h1 className="font-display text-4xl font-semibold text-oro-300">{titolo}</h1>
           {partita.stato !== 'attesa' && partita.stato !== 'finita' && (
             <p className="text-2xl text-crema-50/60">
               oggetto {partita.indice + 1} di {partita.totale}
@@ -129,10 +152,12 @@ export default function ProiezionePage() {
 
         {partita.stato === 'attesa' && (
           <div className="flex flex-col items-center gap-8">
-            <Fumetto massimo={44} className="self-start">
-              Benvenuti! Inquadrate il codice e giocate con me e {FESTEGGIATA.split(' ')[0]}!
+            <Fumetto massimo={44} punta={conPresentatore} className="self-start">
+              {conPresentatore
+                ? `Benvenuti! Inquadrate il codice e giocate con me e ${nome}!`
+                : `Benvenuti! Inquadrate il codice e giocate con ${nome}!`}
             </Fumetto>
-            <Qr testo={indirizzoGioco()} lato={340} />
+            <Qr testo={indirizzoGioco(eventoId)} lato={340} />
             <p className="text-2xl text-crema-50/70">
               {giocatori.length === 0
                 ? 'Nessuno ancora in gara'
@@ -156,7 +181,9 @@ export default function ProiezionePage() {
           // resta e il testo si adatta, l'oggetto sta sotto senza mai scorrere
           <div className="flex min-h-0 flex-1 flex-col gap-6">
             {partita.oggettoStoria && (
-              <Fumetto className="min-h-0 flex-1">{partita.oggettoStoria}</Fumetto>
+              <Fumetto punta={conPresentatore} className="min-h-0 flex-1">
+                {partita.oggettoStoria}
+              </Fumetto>
             )}
 
             <div
@@ -164,9 +191,9 @@ export default function ProiezionePage() {
                 partita.oggettoStoria ? '' : 'flex-1 justify-center'
               }`}
             >
-              {partita.oggettoFoto && (
+              {foto && (
                 <img
-                  src={partita.oggettoFoto}
+                  src={foto}
                   alt=""
                   className={`max-w-[45%] rounded-2xl border-4 border-oro-400 object-contain shadow-2xl ${
                     partita.oggettoStoria ? 'max-h-[34vh]' : 'max-h-[55vh]'
@@ -213,7 +240,7 @@ export default function ProiezionePage() {
                     <div
                       key={e.giocatoreId}
                       className={`rounded-xl px-8 py-4 text-center ${
-                        i === 0 ? 'bg-oro-400 text-bordeaux-900' : 'bg-crema-50/10 text-crema-50'
+                        i === 0 ? 'bg-oro-400 text-primario-900' : 'bg-crema-50/10 text-crema-50'
                       }`}
                     >
                       <p className="text-lg opacity-70">{i + 1}º</p>
@@ -252,7 +279,7 @@ export default function ProiezionePage() {
                 <div
                   key={r.giocatoreId}
                   className={`flex items-baseline justify-between rounded-xl px-8 py-4 ${
-                    i === 0 ? 'bg-oro-400 text-bordeaux-900' : 'bg-crema-50/10'
+                    i === 0 ? 'bg-oro-400 text-primario-900' : 'bg-crema-50/10'
                   }`}
                 >
                   <span className="text-3xl">

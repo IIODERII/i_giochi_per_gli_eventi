@@ -1,4 +1,4 @@
-/** Tocco accademico, usato come piccolo stemma del sito. */
+/** Tocco accademico: lo stemma degli eventi di laurea. */
 export default function Tocco({ className = '' }: { className?: string }) {
   return (
     <svg viewBox="0 0 64 50" className={className} aria-hidden="true" fill="none">

@@ -1,4 +1,6 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
+import { useEvento } from '../../eventi/eventoContext'
+import { nomiBrevi } from '../../eventi/types'
 import { leggiAutore, salvaAutore } from '../shared/autore'
 import {
   AUTORE_MAX,
@@ -18,13 +20,12 @@ interface Props {
 }
 
 export default function PhraseForm({ frasi, aggiungi }: Props) {
+  const { evento } = useEvento()
   const [testo, setTesto] = useState('')
-  const [autore, setAutore] = useState('')
+  const [autore, setAutore] = useState(leggiAutore)
   const [errore, setErrore] = useState<string | null>(null)
   const [conferma, setConferma] = useState<string | null>(null)
   const [inCorso, setInCorso] = useState(false)
-
-  useEffect(() => setAutore(leggiAutore()), [])
 
   const rimasti = TESTO_MAX - testo.trim().length
   const lunghetta = testo.trim().length > TESTO_COMODO
@@ -59,7 +60,7 @@ export default function PhraseForm({ frasi, aggiungi }: Props) {
 
   return (
     <form onSubmit={onSubmit} className="card p-5 sm:p-6">
-      <h2 className="mb-1 text-2xl font-semibold text-bordeaux-800">Cosa succederà stasera?</h2>
+      <h2 className="mb-1 text-2xl font-semibold text-primario-800">Cosa succederà stasera?</h2>
       <p className="mb-5 text-sm text-inchiostro/60">
         Scrivi una cosa che secondo te capiterà durante la festa. Finirà nelle cartelle del bingo
         che gireranno fra i tavoli.
@@ -74,11 +75,11 @@ export default function PhraseForm({ frasi, aggiungi }: Props) {
           className="field min-h-20 resize-y"
           value={testo}
           onChange={(e) => setTesto(e.target.value)}
-          placeholder="es. Qualcuno chiede a Sara cosa sono le scienze nutraceutiche"
+          placeholder={`es. Qualcuno fa un brindisi a ${nomiBrevi(evento)} e si commuove`}
           maxLength={TESTO_MAX}
         />
         <p
-          className={`mt-1.5 text-xs ${lunghetta ? 'text-bordeaux-600' : 'text-inchiostro/50'}`}
+          className={`mt-1.5 text-xs ${lunghetta ? 'text-primario-600' : 'text-inchiostro/50'}`}
         >
           {lunghetta
             ? `Ancora ${rimasti} caratteri, ma più è corta meglio si legge nella casella.`

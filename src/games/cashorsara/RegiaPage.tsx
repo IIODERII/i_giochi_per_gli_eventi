@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useEvento } from '../../eventi/eventoContext'
+import { titoloGioco } from '../../eventi/types'
+import { db } from '../../firebase'
 import { messaggioErroreFirestore } from '../shared/raccolta'
 import {
   aggiungiGiocatoreManuale,
@@ -14,9 +17,10 @@ import {
 import OggettiPanel from './OggettiPanel'
 import { classifica, esitiTurno } from './punteggi'
 import Qr from './Qr'
-import { euro, TITOLO_GIOCO, VALORE_MAX } from './types'
+import { indirizzoGioco } from './riferimenti'
+import { euro, VALORE_MAX } from './types'
 import { useOggetti } from './useOggetti'
-import { indirizzoGioco, usePartita } from './usePartita'
+import { usePartita } from './usePartita'
 
 const ETICHETTE: Record<string, string> = {
   attesa: 'In attesa',
@@ -27,8 +31,10 @@ const ETICHETTE: Record<string, string> = {
 }
 
 export default function RegiaPage() {
-  const { oggetti } = useOggetti()
-  const { partita, giocatori, risposte, risposteDelTurno } = usePartita()
+  const { evento, percorso } = useEvento()
+  const eventoId = evento.id
+  const { oggetti } = useOggetti(eventoId)
+  const { partita, giocatori, risposte, risposteDelTurno } = usePartita(eventoId)
   const [errore, setErrore] = useState<string | null>(null)
   const [confermaAzzera, setConfermaAzzera] = useState(false)
   const [nomeManuale, setNomeManuale] = useState('')
@@ -61,8 +67,8 @@ export default function RegiaPage() {
       return
     }
     await comando(async () => {
-      const id = await aggiungiGiocatoreManuale(nomeManuale.trim())
-      await inviaPuntata(partita.indice, id, nomeManuale.trim(), cifra)
+      const id = await aggiungiGiocatoreManuale(eventoId, nomeManuale.trim())
+      await inviaPuntata(db, eventoId, partita.indice, id, nomeManuale.trim(), cifra)
       setNomeManuale('')
       setValoreManuale('')
     })
@@ -72,12 +78,14 @@ export default function RegiaPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-semibold text-bordeaux-800 sm:text-4xl">{TITOLO_GIOCO}</h1>
+          <h1 className="text-3xl font-semibold text-primario-800 sm:text-4xl">
+            {titoloGioco(evento, 'cashorsara')}
+          </h1>
           <p className="mt-1 text-sm text-inchiostro/65">
             Regia della serata: qui comandi tu, e solo tu vedi le valutazioni vere.
           </p>
         </div>
-        <Link to="/proiezione" target="_blank" className="btn-secondary text-xs">
+        <Link to={percorso('proiezione')} target="_blank" className="btn-secondary text-xs">
           Apri la proiezione ↗
         </Link>
       </header>
@@ -91,7 +99,7 @@ export default function RegiaPage() {
       <section className="card p-5 sm:p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <span className="rounded-full bg-bordeaux-700 px-3 py-1 text-xs font-semibold text-crema-50">
+            <span className="rounded-full bg-primario-700 px-3 py-1 text-xs font-semibold text-crema-50">
               {ETICHETTE[partita.stato]}
             </span>
             {partita.stato !== 'attesa' && partita.stato !== 'finita' && (
@@ -111,7 +119,7 @@ export default function RegiaPage() {
               <img src={oggettoCorrente.foto} alt="" className="h-14 w-14 rounded object-cover" />
             )}
             <div>
-              <p className="font-semibold text-bordeaux-800">{oggettoCorrente.nome}</p>
+              <p className="font-semibold text-primario-800">{oggettoCorrente.nome}</p>
               <p className="text-sm">
                 <span className="text-inchiostro/50">valutazione vera: </span>
                 <span className="font-semibold text-oro-600">{euro(oggettoCorrente.valore)}</span>
@@ -125,13 +133,13 @@ export default function RegiaPage() {
             <button
               className="btn-primary"
               disabled={oggetti.length === 0}
-              onClick={() => comando(() => apriOggetto(oggetti, 0))}
+              onClick={() => comando(() => apriOggetto(eventoId, oggetti, 0))}
             >
               Comincia con il primo oggetto
             </button>
           )}
           {partita.stato === 'puntate' && (
-            <button className="btn-primary" onClick={() => comando(chiudiPuntate)}>
+            <button className="btn-primary" onClick={() => comando(() => chiudiPuntate(eventoId))}>
               Chiudi le puntate
             </button>
           )}
@@ -140,14 +148,16 @@ export default function RegiaPage() {
               <button
                 className="btn-primary"
                 onClick={() =>
-                  comando(() => rivelaValore(partita.indice, oggettoCorrente?.valore ?? 0))
+                  comando(() =>
+                    rivelaValore(eventoId, partita, oggettoCorrente?.valore ?? 0, risposte, giocatori),
+                  )
                 }
               >
                 Rivela la valutazione
               </button>
               <button
                 className="btn-secondary"
-                onClick={() => comando(() => apriOggetto(oggetti, partita.indice))}
+                onClick={() => comando(() => apriOggetto(eventoId, oggetti, partita.indice))}
               >
                 Riapri le puntate
               </button>
@@ -155,13 +165,13 @@ export default function RegiaPage() {
           )}
           {partita.stato === 'rivelato' &&
             (ultimo ? (
-              <button className="btn-primary" onClick={() => comando(terminaPartita)}>
+              <button className="btn-primary" onClick={() => comando(() => terminaPartita(eventoId))}>
                 Chiudi la partita e mostra la classifica
               </button>
             ) : (
               <button
                 className="btn-primary"
-                onClick={() => comando(() => apriOggetto(oggetti, partita.indice + 1))}
+                onClick={() => comando(() => apriOggetto(eventoId, oggetti, partita.indice + 1))}
               >
                 Prossimo oggetto
               </button>
@@ -173,7 +183,7 @@ export default function RegiaPage() {
                 className="btn-danger"
                 onClick={() =>
                   comando(async () => {
-                    await azzeraPartita(oggetti)
+                    await azzeraPartita(eventoId, oggetti)
                     setConfermaAzzera(false)
                   })
                 }
@@ -194,7 +204,7 @@ export default function RegiaPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="card p-5 sm:p-6">
-          <h2 className="mb-3 text-xl font-semibold text-bordeaux-800">
+          <h2 className="mb-3 text-xl font-semibold text-primario-800">
             In sala <span className="text-base font-normal text-inchiostro/50">({giocatori.length})</span>
           </h2>
 
@@ -217,11 +227,11 @@ export default function RegiaPage() {
                     </span>
                     <span className="flex items-center gap-2">
                       {suo && partita.stato !== 'puntate' && (
-                        <span className="font-semibold text-bordeaux-700">{euro(suo.valore)}</span>
+                        <span className="font-semibold text-primario-700">{euro(suo.valore)}</span>
                       )}
                       <button
                         className="btn-ghost px-2 py-0.5 text-xs text-red-700 hover:bg-red-50"
-                        onClick={() => comando(() => rimuoviGiocatore(g.id))}
+                        onClick={() => comando(() => rimuoviGiocatore(eventoId, g.id))}
                       >
                         ×
                       </button>
@@ -234,7 +244,7 @@ export default function RegiaPage() {
 
           {(partita.stato === 'puntate' || partita.stato === 'chiuse') && (
             <div className="rounded-lg border border-oro-200 bg-crema-50 p-3">
-              <p className="mb-2 text-xs font-semibold text-bordeaux-800">
+              <p className="mb-2 text-xs font-semibold text-primario-800">
                 Punta per chi non ha il telefono
               </p>
               <div className="flex flex-wrap gap-2">
@@ -260,7 +270,7 @@ export default function RegiaPage() {
         </section>
 
         <section className="card p-5 sm:p-6">
-          <h2 className="mb-3 text-xl font-semibold text-bordeaux-800">
+          <h2 className="mb-3 text-xl font-semibold text-primario-800">
             {partita.stato === 'rivelato' ? 'Esito dell’oggetto' : 'Classifica generale'}
           </h2>
 
@@ -274,7 +284,7 @@ export default function RegiaPage() {
                     {e.piuVicino && <span className="ml-1 text-oro-600">★</span>}
                   </span>
                   <span className="text-inchiostro/60">
-                    {euro(e.stima)} · <span className="font-semibold text-bordeaux-700">{e.punti} punti</span>
+                    {euro(e.stima)} · <span className="font-semibold text-primario-700">{e.punti} punti</span>
                   </span>
                 </li>
               ))}
@@ -287,7 +297,7 @@ export default function RegiaPage() {
                     <span className="mr-2 font-semibold text-inchiostro/40">{r.posizione}.</span>
                     {r.nome}
                   </span>
-                  <span className="font-semibold text-bordeaux-700">{r.punti}</span>
+                  <span className="font-semibold text-primario-700">{r.punti}</span>
                 </li>
               ))}
             </ol>
@@ -300,14 +310,14 @@ export default function RegiaPage() {
       </div>
 
       <section className="card flex flex-wrap items-center gap-5 p-5 sm:p-6">
-        <Qr testo={indirizzoGioco()} lato={120} />
+        <Qr testo={indirizzoGioco(eventoId)} lato={120} />
         <div className="min-w-0">
-          <h2 className="text-xl font-semibold text-bordeaux-800">Il codice per entrare</h2>
+          <h2 className="text-xl font-semibold text-primario-800">Il codice per entrare</h2>
           <p className="mt-1 text-sm text-inchiostro/60">
             Lo stesso che compare grande sulla proiezione. Gli invitati non devono inserire nessuna
             password: inquadrano, scrivono il nome e giocano.
           </p>
-          <p className="mt-2 break-all text-xs text-inchiostro/45">{indirizzoGioco()}</p>
+          <p className="mt-2 break-all text-xs text-inchiostro/45">{indirizzoGioco(eventoId)}</p>
         </div>
       </section>
 

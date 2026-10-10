@@ -11,7 +11,12 @@ const FOGLI: Record<FormatoFoglio, { larghezza: number; altezza: number }> = {
 
 export { MM_PER_PUNTO }
 
-export const TITOLO_POSTER = 'CruciSara'
+/** Cosa cambia da un evento all'altro nei file da stampare. */
+export interface StileStampa {
+  titolo: string
+  /** Il colore dell'evento, es. "#7b1e3a". */
+  colore: string
+}
 
 /**
  * Spezza il testo in righe che stanno dentro la larghezza data (in mm).
@@ -60,6 +65,7 @@ export function calcolaPoster(
   cruciverba: Cruciverba,
   formato: FormatoFoglio,
   misura: Misuratore,
+  testoTitolo: string,
 ): Poster {
   const foglio = FOGLI[formato]
   const grande = formato === 'a3'
@@ -68,7 +74,7 @@ export function calcolaPoster(
   const centro = foglio.larghezza / 2
 
   const titolo = {
-    testo: TITOLO_POSTER,
+    testo: testoTitolo,
     y: margine + (grande ? 15 : 11),
     dimensione: grande ? 48 : 34,
   }

@@ -1,6 +1,5 @@
 import {
   addDoc,
-  collection,
   deleteDoc,
   doc,
   onSnapshot,
@@ -10,19 +9,19 @@ import {
   updateDoc,
 } from 'firebase/firestore'
 import { useCallback, useEffect, useState } from 'react'
-import { db } from '../../firebase'
 import { messaggioErroreFirestore } from '../shared/raccolta'
-import { COLLEZIONE_OGGETTI, type Oggetto } from './types'
+import { riferimenti } from './riferimenti'
+import type { Oggetto } from './types'
 
 export type DatiOggetto = Omit<Oggetto, 'id' | 'createdAt'>
 
-export function useOggetti() {
+export function useOggetti(eventoId: string) {
   const [oggetti, setOggetti] = useState<Oggetto[]>([])
   const [caricamento, setCaricamento] = useState(true)
   const [errore, setErrore] = useState<string | null>(null)
 
   useEffect(() => {
-    const richiesta = query(collection(db, COLLEZIONE_OGGETTI), orderBy('ordine', 'asc'))
+    const richiesta = query(riferimenti(eventoId).oggetti, orderBy('ordine', 'asc'))
     return onSnapshot(
       richiesta,
       (istantanea) => {
@@ -35,19 +34,28 @@ export function useOggetti() {
         setCaricamento(false)
       },
     )
-  }, [])
+  }, [eventoId])
 
-  const aggiungi = useCallback(async (dati: DatiOggetto) => {
-    await addDoc(collection(db, COLLEZIONE_OGGETTI), { ...dati, createdAt: serverTimestamp() })
-  }, [])
+  const aggiungi = useCallback(
+    async (dati: DatiOggetto) => {
+      await addDoc(riferimenti(eventoId).oggetti, { ...dati, createdAt: serverTimestamp() })
+    },
+    [eventoId],
+  )
 
-  const modifica = useCallback(async (id: string, dati: Partial<DatiOggetto>) => {
-    await updateDoc(doc(db, COLLEZIONE_OGGETTI, id), { ...dati })
-  }, [])
+  const modifica = useCallback(
+    async (id: string, dati: Partial<DatiOggetto>) => {
+      await updateDoc(doc(riferimenti(eventoId).oggetti, id), { ...dati })
+    },
+    [eventoId],
+  )
 
-  const elimina = useCallback(async (id: string) => {
-    await deleteDoc(doc(db, COLLEZIONE_OGGETTI, id))
-  }, [])
+  const elimina = useCallback(
+    async (id: string) => {
+      await deleteDoc(doc(riferimenti(eventoId).oggetti, id))
+    },
+    [eventoId],
+  )
 
   /** Scambia di posto un oggetto con quello precedente o successivo. */
   const sposta = useCallback(
@@ -56,12 +64,13 @@ export function useOggetti() {
       const vicino = oggetti[posizione + direzione]
       if (posizione < 0 || !vicino) return
       const corrente = oggetti[posizione]
+      const r = riferimenti(eventoId)
       await Promise.all([
-        updateDoc(doc(db, COLLEZIONE_OGGETTI, corrente.id), { ordine: vicino.ordine }),
-        updateDoc(doc(db, COLLEZIONE_OGGETTI, vicino.id), { ordine: corrente.ordine }),
+        updateDoc(doc(r.oggetti, corrente.id), { ordine: vicino.ordine }),
+        updateDoc(doc(r.oggetti, vicino.id), { ordine: corrente.ordine }),
       ])
     },
-    [oggetti],
+    [oggetti, eventoId],
   )
 
   return { oggetti, caricamento, errore, aggiungi, modifica, elimina, sposta }

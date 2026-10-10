@@ -3,7 +3,7 @@
  * giochi: gli invitati usano un account solo, quindi questo e' l'unico modo
  * per non far riscrivere il nome a ogni contributo.
  */
-const CHIAVE_AUTORE = 'giochilaurea:autore'
+const CHIAVE_AUTORE = 'giochieventi:autore'
 
 export function leggiAutore(): string {
   try {

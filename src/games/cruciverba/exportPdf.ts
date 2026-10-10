@@ -1,11 +1,17 @@
 import type { Cruciverba } from './generator'
-import { calcolaPoster, type FormatoFoglio, type Misuratore } from './poster'
+import { rgb, sfumatura } from '../../eventi/colore'
+import { nomeFile } from '../../eventi/types'
+import { calcolaPoster, type FormatoFoglio, type Misuratore, type StileStampa } from './poster'
 
 /**
  * Genera e scarica il cartellone: una pagina con la griglia vuota e, sotto,
  * le definizioni su due colonne. La soluzione non viene stampata.
  */
-export async function costruisciPdf(cruciverba: Cruciverba, formato: FormatoFoglio = 'a4') {
+export async function costruisciPdf(
+  cruciverba: Cruciverba,
+  stile: StileStampa,
+  formato: FormatoFoglio = 'a4',
+) {
   const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: formato })
 
@@ -15,12 +21,14 @@ export async function costruisciPdf(cruciverba: Cruciverba, formato: FormatoFogl
     return doc.splitTextToSize(testo, larghezzaMax) as string[]
   }
 
-  const poster = calcolaPoster(cruciverba, formato, misura)
+  const poster = calcolaPoster(cruciverba, formato, misura, stile.titolo)
+  const [r, g, b] = rgb(stile.colore)
+  const [rn, gn, bn] = sfumatura(stile.colore, 0.15)
 
   // --- intestazione ------------------------------------------------------
   doc.setFont('times', 'bold')
   doc.setFontSize(poster.titolo.dimensione)
-  doc.setTextColor(123, 30, 58)
+  doc.setTextColor(r, g, b)
   doc.text(poster.titolo.testo, poster.centro, poster.titolo.y, { align: 'center' })
 
   doc.setFont('times', 'italic')
@@ -45,7 +53,7 @@ export async function costruisciPdf(cruciverba: Cruciverba, formato: FormatoFogl
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(poster.dimensioneNumero)
-  doc.setTextColor(150, 60, 85)
+  doc.setTextColor(rn, gn, bn)
   for (const cella of poster.celle) {
     if (cella.numero !== null) {
       doc.text(String(cella.numero), cella.x + poster.lato * 0.13, cella.y + poster.lato * 0.3)
@@ -57,7 +65,7 @@ export async function costruisciPdf(cruciverba: Cruciverba, formato: FormatoFogl
     let y = poster.yColonne
     doc.setFont('times', 'bold')
     doc.setFontSize(poster.dimensioneTesto + 1)
-    doc.setTextColor(123, 30, 58)
+    doc.setTextColor(r, g, b)
     doc.text(colonna.titolo, colonna.x, y)
     y += poster.interlinea * 2
 
@@ -80,7 +88,11 @@ export async function costruisciPdf(cruciverba: Cruciverba, formato: FormatoFogl
   return doc
 }
 
-export async function scaricaPdf(cruciverba: Cruciverba, formato: FormatoFoglio = 'a4') {
-  const doc = await costruisciPdf(cruciverba, formato)
-  doc.save(`crucisara-${formato}.pdf`)
+export async function scaricaPdf(
+  cruciverba: Cruciverba,
+  stile: StileStampa,
+  formato: FormatoFoglio = 'a4',
+) {
+  const doc = await costruisciPdf(cruciverba, stile, formato)
+  doc.save(`${nomeFile(stile.titolo)}-${formato}.pdf`)
 }

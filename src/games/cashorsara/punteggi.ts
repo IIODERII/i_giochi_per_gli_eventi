@@ -1,4 +1,4 @@
-import type { Giocatore, Risposta } from './types'
+import type { EsitoSalvato, Giocatore, Partita, Risposta, RigaClassifica } from './types'
 
 /** Punti in piu' per chi si avvicina di piu' di tutti. */
 export const BONUS_PIU_VICINO = 20
@@ -57,18 +57,10 @@ export function esitiTurno(risposte: Risposta[], valore: number): EsitoTurno[] {
   })
 }
 
-export interface RigaClassifica {
-  giocatoreId: string
-  nome: string
-  punti: number
-  turni: number
-  posizione: number
-}
-
 /**
  * Classifica generale, ricalcolata ogni volta dalle risposte e dai valori
- * gia' rivelati: non serve salvare punteggi da nessuna parte, e chi entra a
- * meta' partita o corregge una puntata non manda niente fuori sincrono.
+ * gia' rivelati: chi entra a meta' partita o corregge una puntata non manda
+ * niente fuori sincrono. Ai telefoni arriva la copia salvata alla rivelazione.
  */
 export function classifica(
   risposte: Risposta[],
@@ -104,4 +96,34 @@ export function classifica(
     riga.posizione = posizione
   })
   return righe
+}
+
+/**
+ * Quello che si salva nella partita quando si rivela un valore: gli esiti
+ * dell'oggetto e la classifica aggiornata. I telefoni leggono questi, invece
+ * di scaricarsi le puntate di tutti per rifare i conti.
+ */
+export function riepilogoRivelazione(
+  indice: number,
+  valore: number,
+  risposte: Risposta[],
+  giocatori: Giocatore[],
+  valoriRivelati: Record<string, number>,
+): Pick<Partita, 'esiti' | 'puntateTurno' | 'classifica'> {
+  const delTurno = risposte.filter((r) => r.indice === indice)
+  const esiti: Record<string, EsitoSalvato> = {}
+  for (const e of esitiTurno(delTurno, valore)) {
+    esiti[e.giocatoreId] = {
+      stima: e.stima,
+      punti: e.punti,
+      posizione: e.posizione,
+      piuVicino: e.piuVicino,
+      errore: e.errore,
+    }
+  }
+  return {
+    esiti,
+    puntateTurno: delTurno.length,
+    classifica: classifica(risposte, { ...valoriRivelati, [indice]: valore }, giocatori),
+  }
 }

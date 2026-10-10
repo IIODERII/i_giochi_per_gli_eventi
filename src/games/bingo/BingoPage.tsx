@@ -1,17 +1,19 @@
-import { useAuth } from '../../auth/authContext'
+import { useEvento } from '../../eventi/eventoContext'
+import { titoloGioco } from '../../eventi/types'
 import CardsPanel from './CardsPanel'
 import PhraseForm from './PhraseForm'
 import PhraseList from './PhraseList'
 import { useFrasi } from './useFrasi'
 
 export default function BingoPage() {
-  const { isAdmin } = useAuth()
+  const { evento, isAdmin } = useEvento()
+  const titolo = titoloGioco(evento, 'bingo')
   const { frasi, caricamento, errore, aggiungi, modifica, elimina } = useFrasi()
 
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-3xl font-semibold text-bordeaux-800 sm:text-4xl">BingoSara</h1>
+        <h1 className="text-3xl font-semibold text-primario-800 sm:text-4xl">{titolo}</h1>
         <p className="mt-1 max-w-2xl text-sm text-inchiostro/65">
           Il bingo della serata: ognuno scrive cosa pensa che succederà alla festa, e da tutte le
           previsioni nascono le cartelle da distribuire ai tavoli: cinque caselle in fila fanno
@@ -36,7 +38,7 @@ export default function BingoPage() {
         />
       </div>
 
-      {isAdmin && <CardsPanel frasi={frasi} />}
+      {isAdmin && <CardsPanel frasi={frasi} titolo={titolo} />}
     </div>
   )
 }

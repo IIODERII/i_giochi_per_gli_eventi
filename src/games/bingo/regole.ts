@@ -1,3 +1,4 @@
+import { rgb, type Rgb } from '../../eventi/colore'
 import { MM_PER_PUNTO } from '../shared/stampa'
 
 /** Il minimo di jsPDF che serve qui: evita di importarlo staticamente. */
@@ -15,7 +16,6 @@ export interface DisegnatorePdf {
   getTextWidth(testo: string): number
 }
 
-const TITOLO = 'BingoSara'
 const SOTTOTITOLO = 'come si gioca'
 const INTRO =
   'Ogni casella è una previsione su quello che succederà stasera. Quando una si avvera, segna il pallino.'
@@ -50,14 +50,9 @@ const PARAGRAFI: [string, string][] = [
   ],
 ]
 
-const AVVISO = 'Sara non deve sapere niente: è una sorpresa. Niente cartelle in giro, niente spoiler.'
+const INCHIOSTRO: Rgb = [45, 39, 35]
+const GRIGIO: Rgb = [120, 105, 95]
 
-const BORDEAUX: [number, number, number] = [123, 30, 58]
-const INCHIOSTRO: [number, number, number] = [45, 39, 35]
-const GRIGIO: [number, number, number] = [120, 105, 95]
-
-/** Quanto sale sopra la linea di base una maiuscola, in frazione di corpo. */
-const ASCENDENTE = 0.72
 /** Quanto scende sotto la linea di base una "p", in frazione di corpo. */
 const DISCENDENTE = 0.25
 
@@ -69,8 +64,14 @@ interface Scritta {
   dy: number
   dimensione: number
   stile: Stile
-  colore: [number, number, number]
+  colore: Rgb
   carattere: 'helvetica' | 'times'
+}
+
+/** Quello che sul retro cambia da un evento all'altro. */
+export interface TestiRegole {
+  titolo: string
+  colore: string
 }
 
 export interface Regole {
@@ -91,13 +92,14 @@ export function componiRegole(
   dimensione: number,
   larghezzaBlocco: number,
   altezzaBlocco: number,
+  testi: TestiRegole,
 ): Regole {
+  const principale = rgb(testi.colore)
   const pad = Math.min(6, larghezzaBlocco * 0.055)
   const larghezza = larghezzaBlocco - pad * 2
   const interlinea = dimensione * MM_PER_PUNTO * 1.28
   const scritte: Scritta[] = []
   let linea = 0
-  let riquadro = { dx: 0, dy: 0, larghezza: 0, altezza: 0 }
 
   const dueColonne = larghezzaBlocco > altezzaBlocco * 1.2
   const distanza = larghezza * 0.05
@@ -111,7 +113,7 @@ export function componiRegole(
     opzioni: {
       dimensione?: number
       stile?: Stile
-      colore?: [number, number, number]
+      colore?: Rgb
       dx?: number
       larghezza?: number
     },
@@ -141,19 +143,19 @@ export function componiRegole(
   const dimTitolo = dimensione * 1.9
   let y = pad + dimTitolo * MM_PER_PUNTO
   scritte.push({
-    testo: TITOLO,
+    testo: testi.titolo,
     dx: pad,
     dy: y,
     dimensione: dimTitolo,
     stile: 'bold',
-    colore: BORDEAUX,
+    colore: principale,
     carattere: 'times',
   })
   doc.setFont('times', 'bold')
   doc.setFontSize(dimTitolo)
   scritte.push({
     testo: SOTTOTITOLO,
-    dx: pad + doc.getTextWidth(TITOLO) + 2,
+    dx: pad + doc.getTextWidth(testi.titolo) + 2,
     dy: y,
     dimensione,
     stile: 'italic',
@@ -194,7 +196,7 @@ export function componiRegole(
         dy: y,
         dimensione,
         stile: 'bold',
-        colore: BORDEAUX,
+        colore: principale,
         carattere: 'helvetica',
       })
       y = paragrafo(descrizione, { dx: colonna }, y)
@@ -239,36 +241,13 @@ export function componiRegole(
     y = scriviCombinazioni(y, PARAGRAFI.length)
   }
 
-  // --- riquadro con l'avviso su Sara, sempre a tutta larghezza -----------
-  // l'aria sopra e sotto va calcolata sulla linea di base della prima e
-  // dell'ultima riga, altrimenti le lettere toccano il bordo
-  const aria = interlinea * 0.55
-  const cima = y + interlinea * 0.15
-  const primaBase = cima + aria + dimensione * MM_PER_PUNTO * ASCENDENTE
-  const dopo = paragrafo(
-    AVVISO,
-    { stile: 'bold', colore: BORDEAUX, dx: 2.5, larghezza: larghezza - 5 },
-    primaBase,
-  )
-  const fondo = dopo - interlinea + dimensione * MM_PER_PUNTO * DISCENDENTE + aria
-  riquadro = { dx: pad - 1.5, dy: cima, larghezza: larghezza + 3, altezza: fondo - cima }
+  // y e' gia' sulla riga dopo l'ultima: si torna su e si conta solo quanto
+  // scendono le lettere, altrimenti in fondo resterebbe spazio vuoto
+  const fondo = y - interlinea + dimensione * MM_PER_PUNTO * DISCENDENTE
 
   return {
     altezza: fondo + pad,
     disegna: (x: number, yBlocco: number) => {
-      doc.setFillColor(250, 243, 222)
-      doc.setDrawColor(224, 199, 128)
-      doc.setLineWidth(0.3)
-      doc.roundedRect(
-        x + riquadro.dx,
-        yBlocco + riquadro.dy,
-        riquadro.larghezza,
-        riquadro.altezza,
-        1.5,
-        1.5,
-        'FD',
-      )
-
       doc.setDrawColor(201, 162, 39)
       doc.setLineWidth(0.5)
       doc.line(x + pad, yBlocco + linea, x + larghezzaBlocco - pad, yBlocco + linea)
@@ -288,15 +267,16 @@ export function regolePerBlocco(
   doc: DisegnatorePdf,
   larghezza: number,
   altezza: number,
+  testi: TestiRegole,
 ): { dimensione: number; regole: Regole } {
   const dimensioni = [11, 10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6, 5.5, 5, 4.5]
   let scelta = {
     dimensione: dimensioni[0],
-    regole: componiRegole(doc, dimensioni[0], larghezza, altezza),
+    regole: componiRegole(doc, dimensioni[0], larghezza, altezza, testi),
   }
 
   for (const dimensione of dimensioni) {
-    scelta = { dimensione, regole: componiRegole(doc, dimensione, larghezza, altezza) }
+    scelta = { dimensione, regole: componiRegole(doc, dimensione, larghezza, altezza, testi) }
     if (scelta.regole.altezza <= altezza) break
   }
   return scelta

@@ -1,5 +1,13 @@
 import type { Cruciverba } from './generator'
-import { calcolaPoster, MM_PER_PUNTO, type FormatoFoglio, type Misuratore } from './poster'
+import { sfumaturaHex } from '../../eventi/colore'
+import { nomeFile } from '../../eventi/types'
+import {
+  calcolaPoster,
+  MM_PER_PUNTO,
+  type FormatoFoglio,
+  type Misuratore,
+  type StileStampa,
+} from './poster'
 
 /**
  * Punti per pollice dell'immagine prodotta. 300 e' qualita' di stampa;
@@ -62,7 +70,11 @@ function scaricaTela(tela: HTMLCanvasElement, nome: string): Promise<void> {
  * Stesso cartellone del PDF, ma come immagine PNG ad alta risoluzione:
  * il disegno e' vettoriale fino all'ultimo momento, quindi non si sgrana.
  */
-export async function scaricaImmagine(cruciverba: Cruciverba, formato: FormatoFoglio = 'a4') {
+export async function scaricaImmagine(
+  cruciverba: Cruciverba,
+  stile: StileStampa,
+  formato: FormatoFoglio = 'a4',
+) {
   // senza questa attesa il canvas potrebbe disegnare con un carattere di
   // ripiego, diverso da quello che si vede nel sito
   try {
@@ -71,7 +83,8 @@ export async function scaricaImmagine(cruciverba: Cruciverba, formato: FormatoFo
     /* niente */
   }
 
-  const poster = calcolaPoster(cruciverba, formato, creaMisuratore())
+  const poster = calcolaPoster(cruciverba, formato, creaMisuratore(), stile.titolo)
+  const numeri = sfumaturaHex(stile.colore, 0.15)
   const scala = DPI[formato] / 25.4
 
   const tela = document.createElement('canvas')
@@ -88,7 +101,7 @@ export async function scaricaImmagine(cruciverba: Cruciverba, formato: FormatoFo
 
   // --- intestazione ------------------------------------------------------
   ctx.textAlign = 'center'
-  ctx.fillStyle = '#7b1e3a'
+  ctx.fillStyle = stile.colore
   ctx.font = font(poster.titolo.dimensione, '700', SERIF)
   ctx.fillText(poster.titolo.testo, poster.centro, poster.titolo.y)
 
@@ -113,7 +126,7 @@ export async function scaricaImmagine(cruciverba: Cruciverba, formato: FormatoFo
   }
 
   ctx.textAlign = 'left'
-  ctx.fillStyle = '#963c55'
+  ctx.fillStyle = numeri
   ctx.font = font(poster.dimensioneNumero, '600', SANS)
   for (const cella of poster.celle) {
     if (cella.numero !== null) {
@@ -124,7 +137,7 @@ export async function scaricaImmagine(cruciverba: Cruciverba, formato: FormatoFo
   // --- definizioni -------------------------------------------------------
   for (const colonna of poster.colonne) {
     let y = poster.yColonne
-    ctx.fillStyle = '#7b1e3a'
+    ctx.fillStyle = stile.colore
     ctx.font = font(poster.dimensioneTesto + 1, '700', SERIF)
     ctx.fillText(colonna.titolo, colonna.x, y)
     y += poster.interlinea * 2
@@ -140,5 +153,5 @@ export async function scaricaImmagine(cruciverba: Cruciverba, formato: FormatoFo
     }
   }
 
-  await scaricaTela(tela, `crucisara-${formato}.png`)
+  await scaricaTela(tela, `${nomeFile(stile.titolo)}-${formato}.png`)
 }

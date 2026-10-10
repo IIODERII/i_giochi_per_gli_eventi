@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { scaricaImmagine } from './exportImage'
 import { scaricaPdf } from './exportPdf'
 import type { Cruciverba, MotivoScarto } from './generator'
-import type { FormatoFoglio } from './poster'
+import type { FormatoFoglio, StileStampa } from './poster'
 
 const LATO = 34
 
@@ -12,13 +12,19 @@ const MOTIVI: Record<MotivoScarto, string> = {
   'nessun-incastro': 'non si incastra con le altre',
 }
 
-interface Props {
+interface Props extends StileStampa {
   cruciverba: Cruciverba
   isAdmin: boolean
   onRigenera: () => void
 }
 
-export default function CrosswordPreview({ cruciverba, isAdmin, onRigenera }: Props) {
+export default function CrosswordPreview({
+  cruciverba,
+  titolo,
+  colore,
+  isAdmin,
+  onRigenera,
+}: Props) {
   // parte sempre nascosto: ricaricando la pagina lo spoiler torna coperto
   const [visibile, setVisibile] = useState(false)
   const [soluzioni, setSoluzioni] = useState(true)
@@ -30,8 +36,8 @@ export default function CrosswordPreview({ cruciverba, isAdmin, onRigenera }: Pr
     setErrore(null)
     setEsportazione(tipo)
     try {
-      if (tipo === 'pdf') await scaricaPdf(cruciverba, formato)
-      else await scaricaImmagine(cruciverba, formato)
+      if (tipo === 'pdf') await scaricaPdf(cruciverba, { titolo, colore }, formato)
+      else await scaricaImmagine(cruciverba, { titolo, colore }, formato)
     } catch {
       setErrore('Non sono riuscito a creare il file. Riprova.')
     } finally {
@@ -43,7 +49,7 @@ export default function CrosswordPreview({ cruciverba, isAdmin, onRigenera }: Pr
     return (
       <section className="card border-dashed border-oro-300 bg-oro-100/40 p-6 text-center">
         <p className="text-3xl">🤫</p>
-        <h2 className="mt-2 text-2xl font-semibold text-bordeaux-800">Attenzione, spoiler!</h2>
+        <h2 className="mt-2 text-2xl font-semibold text-primario-800">Attenzione, spoiler!</h2>
         <p className="mx-auto mt-2 max-w-md text-sm text-inchiostro/70">
           Qui sotto c'è il cruciverba già risolto, con tutte le parole al loro posto. Se vuoi
           giocarci alla festa senza sapere niente, meglio non guardare.
@@ -59,7 +65,7 @@ export default function CrosswordPreview({ cruciverba, isAdmin, onRigenera }: Pr
     <section className="card p-5 sm:p-6">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold text-bordeaux-800">Anteprima del cruciverba</h2>
+          <h2 className="text-2xl font-semibold text-primario-800">Anteprima del cruciverba</h2>
           <p className="text-sm text-inchiostro/60">
             {cruciverba.piazzate.length} parole incastrate · griglia {cruciverba.larghezza} ×{' '}
             {cruciverba.altezza}
@@ -86,15 +92,15 @@ export default function CrosswordPreview({ cruciverba, isAdmin, onRigenera }: Pr
           </button>
 
           <span className="ml-1 text-xs text-inchiostro/55">Formato:</span>
-          <div className="flex overflow-hidden rounded-lg border border-bordeaux-300">
+          <div className="flex overflow-hidden rounded-lg border border-primario-300">
             {(['a4', 'a3'] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFormato(f)}
                 className={`cursor-pointer px-3 py-2 text-xs font-semibold transition ${
                   formato === f
-                    ? 'bg-bordeaux-700 text-crema-50'
-                    : 'bg-white text-bordeaux-700 hover:bg-bordeaux-50'
+                    ? 'bg-primario-700 text-crema-50'
+                    : 'bg-white text-primario-700 hover:bg-primario-50'
                 }`}
               >
                 {f.toUpperCase()}
@@ -155,7 +161,7 @@ export default function CrosswordPreview({ cruciverba, isAdmin, onRigenera }: Pr
                           x={c * LATO + 3}
                           y={r * LATO + 10}
                           fontSize="9"
-                          fill="#9c2f4e"
+                          className="fill-primario-600"
                           fontFamily="Inter, sans-serif"
                         >
                           {cella.numero}
@@ -187,13 +193,13 @@ export default function CrosswordPreview({ cruciverba, isAdmin, onRigenera }: Pr
               { titolo: 'Verticali', elenco: cruciverba.verticali },
             ].map((gruppo) => (
               <div key={gruppo.titolo}>
-                <h3 className="mb-2 border-b border-oro-200 pb-1 text-lg font-semibold text-bordeaux-800">
+                <h3 className="mb-2 border-b border-oro-200 pb-1 text-lg font-semibold text-primario-800">
                   {gruppo.titolo}
                 </h3>
                 <ol className="space-y-1.5 text-sm">
                   {gruppo.elenco.map((p) => (
                     <li key={p.id} className="flex gap-2">
-                      <span className="shrink-0 font-semibold text-bordeaux-600">{p.numero}.</span>
+                      <span className="shrink-0 font-semibold text-primario-600">{p.numero}.</span>
                       <span className="text-inchiostro/85">{p.definizione}</span>
                     </li>
                   ))}
@@ -206,7 +212,7 @@ export default function CrosswordPreview({ cruciverba, isAdmin, onRigenera }: Pr
 
       {isAdmin && cruciverba.scartate.length > 0 && (
         <div className="mt-6 rounded-lg border border-oro-300 bg-oro-100/50 p-4">
-          <h3 className="text-sm font-semibold text-bordeaux-800">
+          <h3 className="text-sm font-semibold text-primario-800">
             Parole rimaste fuori ({cruciverba.scartate.length})
           </h3>
           <p className="mt-1 text-xs text-inchiostro/60">
@@ -215,7 +221,7 @@ export default function CrosswordPreview({ cruciverba, isAdmin, onRigenera }: Pr
           <ul className="mt-2 space-y-1 text-sm">
             {cruciverba.scartate.map((s) => (
               <li key={s.voce.id} className="flex flex-wrap gap-x-2">
-                <span className="font-mono font-semibold text-bordeaux-700">{s.voce.parola}</span>
+                <span className="font-mono font-semibold text-primario-700">{s.voce.parola}</span>
                 <span className="text-inchiostro/55">— {MOTIVI[s.motivo]}</span>
               </li>
             ))}

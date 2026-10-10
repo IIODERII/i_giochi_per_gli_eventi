@@ -1,13 +1,13 @@
 import { useCallback } from 'react'
+import { useEvento } from '../../eventi/eventoContext'
 import { useRaccolta } from '../shared/raccolta'
 import type { DatiFrase, Frase } from './types'
 
 export { messaggioErroreFirestore } from '../shared/raccolta'
 
-export const COLLEZIONE_FRASI = 'frasi'
-
 export function useFrasi() {
-  const raccolta = useRaccolta<Frase>(COLLEZIONE_FRASI)
+  const { evento } = useEvento()
+  const raccolta = useRaccolta<Frase>(`eventi/${evento.id}/frasi`)
 
   const aggiungi = useCallback(
     (dati: DatiFrase) => raccolta.aggiungi({ testo: dati.testo, autore: dati.autore ?? '' }),

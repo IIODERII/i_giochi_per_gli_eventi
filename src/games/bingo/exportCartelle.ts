@@ -1,8 +1,8 @@
+import { rgb } from '../../eventi/colore'
+import { nomeFile } from '../../eventi/types'
 import { MM_PER_PUNTO } from '../shared/stampa'
 import type { Cartella, FormaCartella } from './generator'
-import { regolePerBlocco } from './regole'
-
-export const TITOLO_BINGO = 'BingoSara'
+import { regolePerBlocco, type TestiRegole } from './regole'
 
 export type CartellePerFoglio = 1 | 2 | 3 | 4 | 6 | 8
 
@@ -23,6 +23,8 @@ export interface OpzioniStampa {
   /** Stampa le regole sul retro di ogni cartella. */
   regole?: boolean
   rilegatura?: LatoRilegatura
+  /** Titolo e colore dell'evento: finiscono in testa e sul retro. */
+  testi: TestiRegole
 }
 
 interface Misure {
@@ -99,7 +101,8 @@ export async function costruisciPdfCartelle(cartelle: Cartella[], opzioni: Opzio
   const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
 
-  const { forma, perFoglio, regole = true, rilegatura = 'lungo' } = opzioni
+  const { forma, perFoglio, regole = true, rilegatura = 'lungo', testi: testiEvento } = opzioni
+  const principale = rgb(testiEvento.colore)
   const m = calcolaMisure(forma, perFoglio)
 
   const bordoCella = m.cella * 0.08
@@ -142,8 +145,8 @@ export async function costruisciPdfCartelle(cartelle: Cartella[], opzioni: Opzio
     const yTestata = y + m.bordo + m.dimTitolo * MM_PER_PUNTO
     doc.setFont('times', 'bold')
     doc.setFontSize(m.dimTitolo)
-    doc.setTextColor(123, 30, 58)
-    doc.text(TITOLO_BINGO, x + m.bordo, yTestata)
+    doc.setTextColor(principale[0], principale[1], principale[2])
+    doc.text(testiEvento.titolo, x + m.bordo, yTestata)
 
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(m.dimPiede)
@@ -241,7 +244,7 @@ export async function costruisciPdfCartelle(cartelle: Cartella[], opzioni: Opzio
   const pagine: Cartella[][] = []
   for (let i = 0; i < cartelle.length; i += perFoglio) pagine.push(cartelle.slice(i, i + perFoglio))
 
-  const retro = regole ? regolePerBlocco(doc, m.larghezzaCartella, m.altezzaCartella) : null
+  const retro = regole ? regolePerBlocco(doc, m.larghezzaCartella, m.altezzaCartella, testiEvento) : null
 
   pagine.forEach((pagina, indicePagina) => {
     if (indicePagina > 0) doc.addPage()
@@ -267,7 +270,7 @@ export async function costruisciPdfCartelle(cartelle: Cartella[], opzioni: Opzio
 
 export async function scaricaCartelle(cartelle: Cartella[], opzioni: OpzioniStampa) {
   const { doc } = await costruisciPdfCartelle(cartelle, opzioni)
-  doc.save(`bingosara-cartelle-${cartelle.length}.pdf`)
+  doc.save(`${nomeFile(opzioni.testi.titolo)}-cartelle-${cartelle.length}.pdf`)
 }
 
 export interface StimaStampa {

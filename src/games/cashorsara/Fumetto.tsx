@@ -5,6 +5,8 @@ interface Props {
   /** Corpo massimo del testo in pixel: si scende finche' non ci sta. */
   massimo?: number
   minimo?: number
+  /** La punta verso il presentatore: senza presentatore la nuvoletta resta senza. */
+  punta?: boolean
   className?: string
 }
 
@@ -13,7 +15,13 @@ interface Props {
  * presentatore. Il testo si rimpicciolisce da solo per stare tutto nello
  * spazio disponibile: sulla TV non si puo' scorrere.
  */
-export default function Fumetto({ children, massimo = 48, minimo = 18, className = '' }: Props) {
+export default function Fumetto({
+  children,
+  massimo = 48,
+  minimo = 18,
+  punta = true,
+  className = '',
+}: Props) {
   const spazio = useRef<HTMLDivElement>(null)
   const testo = useRef<HTMLDivElement>(null)
 
@@ -49,22 +57,24 @@ export default function Fumetto({ children, massimo = 48, minimo = 18, className
 
   return (
     <div
-      className={`relative ml-14 flex rounded-[2.5rem] border-4 border-inchiostro bg-crema-50
+      className={`relative ${punta ? 'ml-14' : ''} flex rounded-[2.5rem] border-4 border-inchiostro bg-crema-50
                   px-10 py-8 text-inchiostro shadow-[8px_8px_0_rgba(0,0,0,0.35)] ${className}`}
     >
-      <svg
-        aria-hidden
-        viewBox="0 0 64 48"
-        className="absolute top-10 -left-[60px] h-12 w-16"
-      >
-        <polygon points="64,2 2,10 64,40" className="fill-crema-50" />
-        <polyline
-          points="64,2 2,10 64,40"
-          className="fill-none stroke-inchiostro"
-          strokeWidth={4}
-          strokeLinejoin="round"
-        />
-      </svg>
+      {punta && (
+        <svg
+          aria-hidden
+          viewBox="0 0 64 48"
+          className="absolute top-10 -left-[60px] h-12 w-16"
+        >
+          <polygon points="64,2 2,10 64,40" className="fill-crema-50" />
+          <polyline
+            points="64,2 2,10 64,40"
+            className="fill-none stroke-inchiostro"
+            strokeWidth={4}
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
       <div ref={spazio} className="min-h-0 w-full flex-1 overflow-hidden">
         <div
           ref={testo}

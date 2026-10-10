@@ -1,4 +1,6 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
+import { useEvento } from '../../eventi/eventoContext'
+import { nomiBrevi } from '../../eventi/types'
 import { leggiAutore, salvaAutore } from '../shared/autore'
 import {
   AUTORE_MAX,
@@ -17,14 +19,13 @@ interface Props {
 }
 
 export default function WordForm({ parole, aggiungi }: Props) {
+  const { evento } = useEvento()
   const [parola, setParola] = useState('')
   const [definizione, setDefinizione] = useState('')
-  const [autore, setAutore] = useState('')
+  const [autore, setAutore] = useState(leggiAutore)
   const [errore, setErrore] = useState<string | null>(null)
   const [conferma, setConferma] = useState<string | null>(null)
   const [inCorso, setInCorso] = useState(false)
-
-  useEffect(() => setAutore(leggiAutore()), [])
 
   const anteprima = normalizzaParola(parola)
 
@@ -62,9 +63,9 @@ export default function WordForm({ parole, aggiungi }: Props) {
 
   return (
     <form onSubmit={onSubmit} className="card p-5 sm:p-6">
-      <h2 className="mb-1 text-2xl font-semibold text-bordeaux-800">Aggiungi una parola</h2>
+      <h2 className="mb-1 text-2xl font-semibold text-primario-800">Aggiungi una parola</h2>
       <p className="mb-5 text-sm text-inchiostro/60">
-        Una parola legata a Sara, ai suoi studi o a un vostro ricordo, con la sua definizione.
+        Una parola legata a {nomiBrevi(evento)} o a un ricordo insieme, con la sua definizione.
       </p>
 
       <div className="mb-4">
@@ -76,14 +77,14 @@ export default function WordForm({ parole, aggiungi }: Props) {
           className="field uppercase"
           value={parola}
           onChange={(e) => setParola(e.target.value)}
-          placeholder="es. Nutraceutica"
+          placeholder="es. Tiramisù"
           autoComplete="off"
           maxLength={40}
         />
         {anteprima && (
           <p className="mt-1.5 text-xs text-inchiostro/55">
             Nel cruciverba diventa{' '}
-            <span className="font-mono font-semibold tracking-wider text-bordeaux-700">
+            <span className="font-mono font-semibold tracking-wider text-primario-700">
               {anteprima}
             </span>{' '}
             ({anteprima.length} lettere)

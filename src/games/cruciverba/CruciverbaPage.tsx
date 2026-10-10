@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { useAuth } from '../../auth/authContext'
+import { useEvento } from '../../eventi/eventoContext'
+import { titoloGioco } from '../../eventi/types'
 import CrosswordPreview from './CrosswordPreview'
 import { generaCruciverba } from './generator'
 import { useParole } from './useParole'
@@ -7,7 +8,8 @@ import WordForm from './WordForm'
 import WordList from './WordList'
 
 export default function CruciverbaPage() {
-  const { isAdmin } = useAuth()
+  const { evento, isAdmin } = useEvento()
+  const titolo = titoloGioco(evento, 'cruciverba')
   const { parole, caricamento, errore, aggiungi, modifica, elimina } = useParole()
   const [seme, setSeme] = useState(1)
 
@@ -18,9 +20,9 @@ export default function CruciverbaPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-3xl font-semibold text-bordeaux-800 sm:text-4xl">CruciSara</h1>
+        <h1 className="text-3xl font-semibold text-primario-800 sm:text-4xl">{titolo}</h1>
         <p className="mt-1 max-w-2xl text-sm text-inchiostro/65">
-          Il cruciverba della laurea si costruisce da solo con le parole che proponete: ogni parola
+          Il cruciverba della festa si costruisce da solo con le parole che proponete: ogni parola
           nuova viene incastrata nella griglia insieme alle altre.
         </p>
       </header>
@@ -44,6 +46,8 @@ export default function CruciverbaPage() {
 
       <CrosswordPreview
         cruciverba={cruciverba}
+        titolo={titolo}
+        colore={evento.colore}
         isAdmin={isAdmin}
         onRigenera={() => setSeme((s) => s + 1)}
       />

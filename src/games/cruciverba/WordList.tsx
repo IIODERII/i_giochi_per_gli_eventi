@@ -73,7 +73,7 @@ export default function WordList({ parole, caricamento, isAdmin, modifica, elimi
   return (
     <section className="card p-5 sm:p-6">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-2xl font-semibold text-bordeaux-800">
+        <h2 className="text-2xl font-semibold text-primario-800">
           Parole inserite{' '}
           <span className="text-base font-normal text-inchiostro/50">({parole.length})</span>
         </h2>
@@ -136,7 +136,7 @@ export default function WordList({ parole, caricamento, isAdmin, modifica, elimi
               ) : (
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-mono text-base font-semibold tracking-wide text-bordeaux-700">
+                    <p className="font-mono text-base font-semibold tracking-wide text-primario-700">
                       {normalizzaParola(p.parola)}
                     </p>
                     <p className="mt-0.5 text-sm text-inchiostro/85">{p.definizione}</p>

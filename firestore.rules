@@ -3,93 +3,172 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Chi e' entrato con utente e password (gli anonimi del QR non passano).
-    function registrato() {
-      return request.auth != null && request.auth.token.email != null;
-    }
+    // --- Chi e' chi ---------------------------------------------------------
 
-    // Chiunque abbia una identita', anche quella anonima del gioco.
+    // Chiunque abbia una identita', anche quella anonima del QR di gioco.
     function connesso() {
       return request.auth != null;
     }
 
-    function admin() {
-      return registrato() && request.auth.token.email == 'oder@laurea.local';
+    // Entrato con utente e password (gli anonimi del QR non passano).
+    function registrato() {
+      return connesso() && request.auth.token.firebase.sign_in_provider == 'password';
     }
 
-    function statoPartita() {
-      return get(/databases/$(database)/documents/partita/corrente).data.stato;
+    // Oder: gestisce tutti gli eventi. Lo stesso UID sta in src/config.ts.
+    function superadmin() {
+      return connesso() && request.auth.uid == '2coos8n46YPOGzSAe2zhTUs23ls1';
     }
 
-    // --- CruciSara: parole e definizioni ---------------------------------
-    function parolaValida(d) {
-      return d.parola is string
-        && d.parola.size() >= 3
-        && d.parola.size() <= 15
-        && d.definizione is string
-        && d.definizione.size() > 0
-        && d.definizione.size() <= 300
-        && d.autore is string
-        && d.autore.size() <= 40;
+    // Ruolo ed evento di ogni utente li scrive Oder in utenti/{uid}.
+    function profilo() {
+      return /databases/$(database)/documents/utenti/$(request.auth.uid);
     }
 
-    match /parole/{id} {
-      allow read: if registrato();
-      allow create: if registrato() && parolaValida(request.resource.data);
-      allow update: if admin() && parolaValida(request.resource.data);
-      allow delete: if admin();
+    function membro(eventoId) {
+      return superadmin()
+        || (registrato()
+            && exists(profilo())
+            && get(profilo()).data.eventoId == eventoId);
     }
 
-    // --- BingoSara: previsioni sulla serata ------------------------------
-    function fraseValida(d) {
-      return d.testo is string
-        && d.testo.size() >= 3
-        && d.testo.size() <= 80
-        && d.autore is string
-        && d.autore.size() <= 40;
+    function admin(eventoId) {
+      return superadmin()
+        || (registrato()
+            && exists(profilo())
+            && get(profilo()).data.eventoId == eventoId
+            && get(profilo()).data.ruolo == 'admin');
     }
 
-    match /frasi/{id} {
-      allow read: if registrato();
-      allow create: if registrato() && fraseValida(request.resource.data);
-      allow update: if admin() && fraseValida(request.resource.data);
-      allow delete: if admin();
+    // --- Utenti e credenziali (solo Oder li crea) ---------------------------
+
+    match /utenti/{uid} {
+      allow read: if superadmin() || (connesso() && request.auth.uid == uid);
+      allow write: if superadmin();
     }
 
-    // --- Cash or Sara ----------------------------------------------------
-    // Gli oggetti contengono le valutazioni vere: nessuno all'infuori di Oder
-    // puo' nemmeno leggerli. Agli invitati arriva solo quello che Oder mette
-    // nel documento della partita.
-    match /oggetti/{id} {
-      allow read, write: if admin();
+    // Le password generate: servono a Oder per rivederle, cambiarle ed
+    // eliminare gli utenti. L'admin dell'evento le legge per girare
+    // l'accesso agli invitati.
+    match /credenziali/{eventoId} {
+      allow read: if admin(eventoId);
+      allow write: if superadmin();
     }
 
-    match /partita/{partitaId} {
-      allow read: if connesso();
-      allow write: if admin();
+    // --- Gli eventi ---------------------------------------------------------
 
-      match /giocatori/{giocatoreId} {
-        allow read: if connesso();
-        allow create, update: if admin()
-          || (connesso()
-              && request.auth.uid == giocatoreId
-              && request.resource.data.nome is string
-              && request.resource.data.nome.size() >= 2
-              && request.resource.data.nome.size() <= 24);
-        allow delete: if admin();
+    function eventoValido(d) {
+      return d.tipo in ['laurea', 'compleanno', 'matrimonio', 'battesimo',
+                        'comunione', 'anniversario', 'festa']
+        && d.festeggiati is list
+        && d.festeggiati.size() >= 1
+        && d.festeggiati.size() <= 4
+        && d.dettaglio is string
+        && d.dettaglio.size() <= 120
+        && d.data is string
+        && d.data.size() <= 10
+        && d.colore is string
+        && d.colore.matches('^#[0-9a-fA-F]{6}$')
+        && d.giochi is map
+        && d.presentatore is string
+        && d.presentatore.size() <= 40;
+    }
+
+    match /eventi/{eventoId} {
+      // Il singolo evento lo legge chiunque sia connesso: serve anche alla
+      // pagina del QR per titolo e colore. L'elenco completo solo Oder.
+      allow get: if connesso();
+      allow list: if superadmin();
+      allow create, delete: if superadmin();
+      // L'admin cambia le impostazioni, non l'identita' dell'evento.
+      allow update: if superadmin()
+        || (admin(eventoId)
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['configurato', 'tipo', 'festeggiati', 'dettaglio', 'data',
+                           'colore', 'giochi', 'presentatore', 'aggiornatoIl'])
+            && eventoValido(request.resource.data));
+
+      // --- Cruciverba: parole e definizioni --------------------------------
+      function parolaValida(d) {
+        return d.parola is string
+          && d.parola.size() >= 3
+          && d.parola.size() <= 15
+          && d.definizione is string
+          && d.definizione.size() > 0
+          && d.definizione.size() <= 300
+          && d.autore is string
+          && d.autore.size() <= 40;
       }
 
-      match /risposte/{rispostaId} {
+      match /parole/{id} {
+        allow read: if membro(eventoId);
+        allow create: if membro(eventoId) && parolaValida(request.resource.data);
+        allow update: if admin(eventoId) && parolaValida(request.resource.data);
+        allow delete: if admin(eventoId);
+      }
+
+      // --- Bingo: previsioni sulla serata ----------------------------------
+      function fraseValida(d) {
+        return d.testo is string
+          && d.testo.size() >= 3
+          && d.testo.size() <= 80
+          && d.autore is string
+          && d.autore.size() <= 40;
+      }
+
+      match /frasi/{id} {
+        allow read: if membro(eventoId);
+        allow create: if membro(eventoId) && fraseValida(request.resource.data);
+        allow update: if admin(eventoId) && fraseValida(request.resource.data);
+        allow delete: if admin(eventoId);
+      }
+
+      // --- Cash or ... ------------------------------------------------------
+      // Gli oggetti contengono le valutazioni vere: nessuno all'infuori
+      // dell'admin puo' nemmeno leggerli. Agli invitati arriva solo quello
+      // che l'admin mette nel documento della partita.
+      match /oggetti/{id} {
+        allow read, write: if admin(eventoId);
+      }
+
+      // La foto del presentatore: la usano solo impostazioni e proiezione.
+      match /media/{id} {
+        allow read, write: if admin(eventoId);
+      }
+
+      function statoPartita() {
+        return get(/databases/$(database)/documents/eventi/$(eventoId)/partita/corrente).data.stato;
+      }
+
+      // "corrente" (lo stato) e "vetrina" (la foto dell'oggetto in gioco)
+      match /partita/{partitaId} {
         allow read: if connesso();
-        // si punta solo su se stessi e solo mentre le puntate sono aperte
-        allow create, update: if admin()
-          || (connesso()
-              && request.resource.data.giocatoreId == request.auth.uid
-              && request.resource.data.valore is number
-              && request.resource.data.valore >= 0
-              && request.resource.data.valore <= 1000000
-              && statoPartita() == 'puntate');
-        allow delete: if admin();
+        allow write: if admin(eventoId);
+
+        match /giocatori/{giocatoreId} {
+          allow read: if connesso();
+          allow create, update: if admin(eventoId)
+            || (connesso()
+                && request.auth.uid == giocatoreId
+                && request.resource.data.nome is string
+                && request.resource.data.nome.size() >= 2
+                && request.resource.data.nome.size() <= 24);
+          allow delete: if admin(eventoId);
+        }
+
+        match /risposte/{rispostaId} {
+          allow read: if connesso();
+          // si punta solo su se stessi e solo mentre le puntate sono aperte
+          allow create, update: if admin(eventoId)
+            || (connesso()
+                && request.resource.data.giocatoreId == request.auth.uid
+                && rispostaId == string(request.resource.data.indice) + '__' + request.auth.uid
+                && request.resource.data.valore is number
+                && request.resource.data.valore >= 0
+                && request.resource.data.valore <= 1000000
+                && statoPartita() == 'puntate');
+          allow delete: if admin(eventoId);
+        }
       }
     }
 

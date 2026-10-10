@@ -64,7 +64,7 @@ export default function PhraseList({ frasi, caricamento, isAdmin, modifica, elim
 
   return (
     <section className="card p-5 sm:p-6">
-      <h2 className="mb-4 text-2xl font-semibold text-bordeaux-800">
+      <h2 className="mb-4 text-2xl font-semibold text-primario-800">
         Previsioni raccolte{' '}
         <span className="text-base font-normal text-inchiostro/50">({frasi.length})</span>
       </h2>

@@ -1,23 +1,11 @@
 import type { Timestamp } from 'firebase/firestore'
 
-export const COLLEZIONE_OGGETTI = 'oggetti'
-export const COLLEZIONE_PARTITA = 'partita'
-export const ID_PARTITA = 'corrente'
-
-export const TITOLO_GIOCO = 'Cash or Sara'
 export const NOME_MAX = 24
 export const VALORE_MAX = 1_000_000
-/** La storia la racconta Alessandro Rosa nel fumetto: puo' essere lunga. */
+/** La storia la racconta il presentatore nel fumetto: puo' essere lunga. */
 export const STORIA_MAX = 1500
 
-/**
- * Il presentatore che "racconta" gli oggetti sulla proiezione. La foto va
- * messa in public/cashorsara/ con questo nome: se manca, la colonna sparisce.
- */
-export const PRESENTATORE = 'Alessandro Rosa'
-export const FOTO_PRESENTATORE = `${import.meta.env.BASE_URL}cashorsara/alessandro-rosa.png`
-
-/** Un oggetto da valutare. Il valore vero lo vede solo Oder. */
+/** Un oggetto da valutare. Il valore vero lo vede solo l'admin. */
 export interface Oggetto {
   id: string
   nome: string
@@ -30,10 +18,31 @@ export interface Oggetto {
 
 export type StatoPartita = 'attesa' | 'puntate' | 'chiuse' | 'rivelato' | 'finita'
 
+/** Com'e' andata a un giocatore sull'oggetto appena rivelato. */
+export interface EsitoSalvato {
+  stima: number
+  punti: number
+  posizione: number
+  piuVicino: boolean
+  errore: number
+}
+
+export interface RigaClassifica {
+  giocatoreId: string
+  nome: string
+  punti: number
+  turni: number
+  posizione: number
+}
+
 /**
- * Lo stato che vedono tutti: dell'oggetto in gioco viaggiano solo nome,
- * storia e foto. Il valore vero entra in "valoriRivelati" soltanto nel
- * momento in cui Oder lo rivela.
+ * Lo stato che vedono tutti: dell'oggetto in gioco viaggiano solo nome e
+ * storia (la foto sta a parte, nella vetrina). Il valore vero entra in
+ * "valoriRivelati" soltanto nel momento in cui l'admin lo rivela.
+ *
+ * Esiti e classifica vengono calcolati da chi rivela e salvati qui: cosi' i
+ * telefoni non devono ascoltare le puntate di tutti, e ogni passo della
+ * partita costa a ciascun telefono una sola lettura.
  */
 export interface Partita {
   stato: StatoPartita
@@ -42,8 +51,12 @@ export interface Partita {
   oggettoId: string | null
   oggettoNome: string
   oggettoStoria: string
-  oggettoFoto: string | null
   valoriRivelati: Record<string, number>
+  /** Esiti dell'ultimo oggetto rivelato, per giocatore. */
+  esiti: Record<string, EsitoSalvato>
+  /** Quanti hanno puntato sull'ultimo oggetto rivelato. */
+  puntateTurno: number
+  classifica: RigaClassifica[]
   aggiornataIl?: Timestamp | null
 }
 
@@ -54,8 +67,20 @@ export const PARTITA_VUOTA: Partita = {
   oggettoId: null,
   oggettoNome: '',
   oggettoStoria: '',
-  oggettoFoto: null,
   valoriRivelati: {},
+  esiti: {},
+  puntateTurno: 0,
+  classifica: [],
+}
+
+/**
+ * La foto dell'oggetto in gioco. Sta in un documento a parte perche' pesa
+ * centinaia di KB: dentro la partita viaggerebbe verso ogni telefono a ogni
+ * cambio di stato, qui solo una volta per oggetto.
+ */
+export interface Vetrina {
+  indice: number
+  foto: string | null
 }
 
 export interface Giocatore {

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { sfumaturaHex } from '../../eventi/colore'
+import { useEvento } from '../../eventi/eventoContext'
 
 interface Props {
   testo: string
@@ -7,6 +9,9 @@ interface Props {
 
 /** Codice QR disegnato al volo: la libreria si carica solo quando serve. */
 export default function Qr({ testo, lato }: Props) {
+  const { evento } = useEvento()
+  // lo stesso colore del sito, un po' piu' scuro: i lettori vogliono un buon contrasto
+  const scuro = sfumaturaHex(evento.colore, -0.22)
   const [immagine, setImmagine] = useState<string | null>(null)
 
   useEffect(() => {
@@ -16,7 +21,7 @@ export default function Qr({ testo, lato }: Props) {
         modulo.default.toDataURL(testo, {
           width: lato,
           margin: 1,
-          color: { dark: '#5f162c', light: '#ffffff' },
+          color: { dark: scuro, light: '#ffffff' },
         }),
       )
       .then((url) => {
@@ -28,7 +33,7 @@ export default function Qr({ testo, lato }: Props) {
     return () => {
       annullato = true
     }
-  }, [testo, lato])
+  }, [testo, lato, scuro])
 
   return (
     <div

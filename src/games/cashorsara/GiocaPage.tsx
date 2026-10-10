@@ -1,60 +1,54 @@
-import { signInAnonymously } from 'firebase/auth'
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { useAuth } from '../../auth/authContext'
+import type { Firestore } from 'firebase/firestore'
+import { useState, type FormEvent } from 'react'
+import IconaEvento from '../../components/IconaEvento'
 import Loader from '../../components/Loader'
-import Tocco from '../../components/Tocco'
-import { FESTEGGIATA } from '../../config'
-import { auth } from '../../firebase'
+import { useEvento } from '../../eventi/eventoContext'
+import { nomiBrevi, titoloGioco } from '../../eventi/types'
 import { messaggioErroreFirestore } from '../shared/raccolta'
-import { entraInPartita, inviaPuntata } from './comandi'
-import { classifica, esitiTurno } from './punteggi'
-import { euro, nomeValido, PRESENTATORE, TITOLO_GIOCO, VALORE_MAX } from './types'
-import { usePartita } from './usePartita'
+import { entraInPartita, inviaPuntata, nomiInGara } from './comandi'
+import { euro, nomeValido, VALORE_MAX } from './types'
+import { usePartitaGiocatore } from './usePartita'
 
-export default function GiocaPage() {
-  const { user, loading } = useAuth()
-  const { partita, giocatori, risposte, risposteDelTurno } = usePartita()
+interface Props {
+  /** L'identita' anonima di questo telefono (vedi istanzaGioco.ts). */
+  mioId: string
+  firestore: Firestore
+}
+
+export default function GiocaPage({ mioId, firestore }: Props) {
+  const { evento } = useEvento()
+  const eventoId = evento.id
+  const { partita, foto, io, miaPuntata, caricamento } = usePartitaGiocatore(
+    firestore,
+    eventoId,
+    mioId,
+  )
   const [nome, setNome] = useState('')
   const [cifra, setCifra] = useState('')
   const [errore, setErrore] = useState<string | null>(null)
   const [inCorso, setInCorso] = useState(false)
 
-  // chi arriva dal QR non ha nessun account: si entra in modo anonimo
-  useEffect(() => {
-    if (!loading && !user) signInAnonymously(auth).catch(() => undefined)
-  }, [loading, user])
-
-  const mioId = user?.uid ?? ''
-  const io = giocatori.find((g) => g.id === mioId) ?? null
-  const miaPuntata = risposteDelTurno.find((r) => r.giocatoreId === mioId) ?? null
   const valore = partita.valoriRivelati[String(partita.indice)]
-
-  const mioEsito = useMemo(() => {
-    if (valore == null) return null
-    return esitiTurno(risposteDelTurno, valore).find((e) => e.giocatoreId === mioId) ?? null
-  }, [risposteDelTurno, valore, mioId])
-
-  const generale = useMemo(
-    () => classifica(risposte, partita.valoriRivelati, giocatori),
-    [risposte, partita.valoriRivelati, giocatori],
-  )
+  // esiti e classifica li ha gia' calcolati e salvati chi ha rivelato il valore
+  const mioEsito = partita.stato === 'rivelato' ? (partita.esiti[mioId] ?? null) : null
+  const generale = partita.classifica
   const miaPosizione = generale.find((r) => r.giocatoreId === mioId) ?? null
 
   async function entra(e: FormEvent) {
     e.preventDefault()
     const controllo = nomeValido(nome)
     if (!controllo.ok) return setErrore(controllo.errore ?? null)
-    if (
-      giocatori.some(
-        (g) => g.id !== mioId && g.nome.toLowerCase() === controllo.valore.toLowerCase(),
-      )
-    ) {
-      return setErrore('C’è già un altro giocatore con questo nome: aggiungi il cognome.')
-    }
     setErrore(null)
     setInCorso(true)
     try {
-      await entraInPartita(mioId, controllo.valore)
+      const altri = await nomiInGara(firestore, eventoId)
+      if (
+        altri.some((g) => g.id !== mioId && g.nome.toLowerCase() === controllo.valore.toLowerCase())
+      ) {
+        setErrore('C’è già un altro giocatore con questo nome: aggiungi il cognome.')
+        return
+      }
+      await entraInPartita(firestore, eventoId, mioId, controllo.valore)
     } catch (err) {
       setErrore(messaggioErroreFirestore(err))
     } finally {
@@ -71,7 +65,7 @@ export default function GiocaPage() {
     setErrore(null)
     setInCorso(true)
     try {
-      await inviaPuntata(partita.indice, mioId, io?.nome ?? 'Ospite', importo)
+      await inviaPuntata(firestore, eventoId, partita.indice, mioId, io?.nome ?? 'Ospite', importo)
       setCifra('')
     } catch (err) {
       setErrore(messaggioErroreFirestore(err))
@@ -80,10 +74,23 @@ export default function GiocaPage() {
     }
   }
 
-  if (loading || !user) {
+  if (caricamento) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-crema-100">
         <Loader testo="Un attimo…" />
+      </div>
+    )
+  }
+
+  if (!evento.configurato || !evento.giochi.cashorsara.attivo) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-crema-100 px-4">
+        <div className="card max-w-sm p-6 text-center">
+          <h1 className="text-2xl font-semibold text-primario-800">Gioco non disponibile</h1>
+          <p className="mt-2 text-sm text-inchiostro/65">
+            Questo gioco non è attivo per la festa. Chiedi agli organizzatori!
+          </p>
+        </div>
       </div>
     )
   }
@@ -92,10 +99,12 @@ export default function GiocaPage() {
     <div className="min-h-screen bg-crema-100 px-4 py-6">
       <div className="mx-auto w-full max-w-md space-y-5">
         <header className="text-center">
-          <Tocco className="mx-auto mb-2 h-9 w-12 text-bordeaux-700" />
-          <h1 className="font-display text-3xl font-semibold text-bordeaux-800">{TITOLO_GIOCO}</h1>
+          <IconaEvento tipo={evento.tipo} className="mx-auto mb-2 h-9 w-12 text-primario-700" />
+          <h1 className="font-display text-3xl font-semibold text-primario-800">
+            {titoloGioco(evento, 'cashorsara')}
+          </h1>
           <p className="text-sm text-inchiostro/55">
-            Quanto vale? Indovina il prezzo insieme a {FESTEGGIATA.split(' ')[0]}
+            Quanto vale? Indovina il prezzo insieme a {nomiBrevi(evento)}
           </p>
         </header>
 
@@ -128,7 +137,7 @@ export default function GiocaPage() {
         ) : (
           <>
             <p className="text-center text-sm text-inchiostro/55">
-              Ciao <span className="font-semibold text-bordeaux-700">{io.nome}</span>
+              Ciao <span className="font-semibold text-primario-700">{io.nome}</span>
               {miaPosizione && miaPosizione.turni > 0 && (
                 <> · {miaPosizione.punti} punti, {miaPosizione.posizione}º posto</>
               )}
@@ -137,7 +146,7 @@ export default function GiocaPage() {
             {partita.stato === 'attesa' && (
               <div className="card p-6 text-center">
                 <p className="text-4xl">🍾</p>
-                <p className="mt-2 font-semibold text-bordeaux-800">Sei in gara!</p>
+                <p className="mt-2 font-semibold text-primario-800">Sei in gara!</p>
                 <p className="mt-1 text-sm text-inchiostro/60">
                   Aspetta che venga presentato il primo oggetto. Tieni d'occhio lo schermo.
                 </p>
@@ -146,19 +155,21 @@ export default function GiocaPage() {
 
             {partita.stato === 'puntate' && (
               <form onSubmit={punta} className="card p-5">
-                {partita.oggettoFoto && (
+                {foto && (
                   <img
-                    src={partita.oggettoFoto}
+                    src={foto}
                     alt=""
                     className="mb-3 max-h-44 w-full rounded-lg object-contain"
                   />
                 )}
-                <h2 className="text-xl font-semibold text-bordeaux-800">{partita.oggettoNome}</h2>
+                <h2 className="text-xl font-semibold text-primario-800">{partita.oggettoNome}</h2>
                 {/* la storia puo' essere lunga: chiusa, per non spingere giu' la puntata */}
                 {partita.oggettoStoria && (
                   <details className="mt-1 mb-4 text-sm text-inchiostro/65">
-                    <summary className="cursor-pointer font-medium text-bordeaux-700">
-                      Rileggi la storia di {PRESENTATORE}
+                    <summary className="cursor-pointer font-medium text-primario-700">
+                      {evento.presentatore
+                        ? `Rileggi la storia di ${evento.presentatore}`
+                        : 'Rileggi la storia'}
                     </summary>
                     <p className="mt-2 whitespace-pre-line">{partita.oggettoStoria}</p>
                   </details>
@@ -194,7 +205,7 @@ export default function GiocaPage() {
 
             {partita.stato === 'chiuse' && (
               <div className="card p-6 text-center">
-                <p className="font-semibold text-bordeaux-800">Puntate chiuse</p>
+                <p className="font-semibold text-primario-800">Puntate chiuse</p>
                 <p className="mt-1 text-sm text-inchiostro/60">
                   {miaPuntata
                     ? `La tua stima: ${euro(miaPuntata.valore)}`
@@ -207,7 +218,7 @@ export default function GiocaPage() {
             {partita.stato === 'rivelato' && (
               <div className="card p-6 text-center">
                 <p className="text-sm uppercase tracking-wide text-inchiostro/45">valutazione</p>
-                <p className="font-display text-4xl font-semibold text-bordeaux-800">
+                <p className="font-display text-4xl font-semibold text-primario-800">
                   {valore != null ? euro(valore) : '—'}
                 </p>
                 {mioEsito ? (
@@ -218,12 +229,12 @@ export default function GiocaPage() {
                     <p className="text-inchiostro/70">
                       Hai sbagliato del {(mioEsito.errore * 100).toFixed(0)}%
                     </p>
-                    <p className="text-lg font-semibold text-bordeaux-700">
+                    <p className="text-lg font-semibold text-primario-700">
                       +{mioEsito.punti} punti
                       {mioEsito.piuVicino && ' · il più vicino di tutti!'}
                     </p>
                     <p className="text-inchiostro/50">
-                      {mioEsito.posizione}º su {risposteDelTurno.length} per questo oggetto
+                      {mioEsito.posizione}º su {partita.puntateTurno} per questo oggetto
                     </p>
                   </div>
                 ) : (
@@ -236,7 +247,7 @@ export default function GiocaPage() {
 
             {partita.stato === 'finita' && (
               <div className="card p-6">
-                <p className="mb-3 text-center font-display text-2xl font-semibold text-bordeaux-800">
+                <p className="mb-3 text-center font-display text-2xl font-semibold text-primario-800">
                   Classifica finale
                 </p>
                 <ol className="space-y-1.5 text-sm">
@@ -251,7 +262,7 @@ export default function GiocaPage() {
                         <span className="mr-2 text-inchiostro/40">{r.posizione}º</span>
                         {r.nome}
                       </span>
-                      <span className="text-bordeaux-700">{r.punti}</span>
+                      <span className="text-primario-700">{r.punti}</span>
                     </li>
                   ))}
                 </ol>

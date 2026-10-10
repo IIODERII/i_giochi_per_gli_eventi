@@ -36,9 +36,9 @@ export function messaggioErroreFirestore(errore: unknown): string {
 }
 
 /**
- * Tiene sincronizzata una collezione di Firestore con la pagina: l'elenco si
- * aggiorna da solo quando qualcuno aggiunge o toglie qualcosa, da qualunque
- * telefono lo faccia.
+ * Tiene sincronizzata una collezione di Firestore (es. "eventi/sara25/parole")
+ * con la pagina: l'elenco si aggiorna da solo quando qualcuno aggiunge o toglie
+ * qualcosa, da qualunque telefono lo faccia.
  */
 export function useRaccolta<T extends Voce>(collezione: string) {
   const [voci, setVoci] = useState<T[]>([])
@@ -46,7 +46,6 @@ export function useRaccolta<T extends Voce>(collezione: string) {
   const [errore, setErrore] = useState<string | null>(null)
 
   useEffect(() => {
-    setCaricamento(true)
     const richiesta = query(collection(db, collezione), orderBy('createdAt', 'desc'))
     return onSnapshot(
       richiesta,
