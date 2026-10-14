@@ -5,7 +5,7 @@ import Loader from '../components/Loader'
 import { db } from '../firebase'
 import type { Credenziali, RuoloEvento } from './account'
 import { rigeneraPassword } from './gestioneEventi'
-import { messaggioAdmin, messaggioOspiti } from './messaggi'
+import { messaggioAdmin, messaggioOspiti, messaggioSpiegazione } from './messaggi'
 
 const ETICHETTE: Record<RuoloEvento, { titolo: string; spiegazione: string }> = {
   admin: {
@@ -14,7 +14,7 @@ const ETICHETTE: Record<RuoloEvento, { titolo: string; spiegazione: string }> = 
   },
   ospiti: {
     titolo: 'Invitati',
-    spiegazione: 'Un solo accesso per tutti: propongono parole e previsioni.',
+    spiegazione: 'Un solo accesso per tutti: propongono e partecipano, ma non modificano niente.',
   },
 }
 
@@ -78,6 +78,29 @@ export default function CredenzialiPanel({
         <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {errore}
         </p>
+      )}
+
+      {gestione && (
+        <div className="rounded-lg border border-oro-400 bg-oro-100/50 p-4">
+          <p className="font-semibold text-primario-800">Il messaggio completo per l’organizzatore</p>
+          <p className="mb-3 text-xs text-inchiostro/55">
+            Entrambi gli accessi, con la spiegazione di cosa può fare l’admin e cosa gli invitati.
+            Pensato per WhatsApp: gli asterischi diventano grassetto.
+          </p>
+          <details className="mb-3">
+            <summary className="cursor-pointer text-xs font-semibold text-primario-700">
+              Leggi il messaggio
+            </summary>
+            <pre className="mt-2 max-h-72 overflow-y-auto rounded-md border border-crema-300 bg-white p-3 font-sans text-xs whitespace-pre-wrap text-inchiostro/80">
+              {messaggioSpiegazione(credenziali)}
+            </pre>
+          </details>
+          <Copia
+            testo={messaggioSpiegazione(credenziali)}
+            etichetta="Copia il messaggio completo"
+            className="btn-primary px-3 py-1.5 text-xs"
+          />
+        </div>
       )}
 
       {ruoli.map((ruolo) => {

@@ -10,7 +10,7 @@ export type TipoEvento =
   | 'anniversario'
   | 'festa'
 
-export type IdGioco = 'cruciverba' | 'bingo' | 'cashorsara' | 'papiro'
+export type IdGioco = 'cruciverba' | 'bingo' | 'fantafesta' | 'cashorsara' | 'papiro'
 
 export interface ImpostazioniGioco {
   attivo: boolean
@@ -110,6 +110,7 @@ export const ELENCO_TIPI = Object.keys(TIPI) as TipoEvento[]
 export const GIOCHI_PREDEFINITI: Record<IdGioco, ImpostazioniGioco> = {
   cruciverba: { attivo: true, titolo: '' },
   bingo: { attivo: true, titolo: '' },
+  fantafesta: { attivo: true, titolo: '' },
   cashorsara: { attivo: true, titolo: '' },
   papiro: { attivo: true, titolo: '' },
 }
@@ -139,6 +140,7 @@ export function normalizzaEvento(id: string, dati: Partial<Evento>): Evento {
     giochi: {
       cruciverba: { ...vuoto.giochi.cruciverba, ...dati.giochi?.cruciverba },
       bingo: { ...vuoto.giochi.bingo, ...dati.giochi?.bingo },
+      fantafesta: { ...vuoto.giochi.fantafesta, ...dati.giochi?.fantafesta },
       cashorsara: { ...vuoto.giochi.cashorsara, ...dati.giochi?.cashorsara },
       papiro: { ...vuoto.giochi.papiro, ...dati.giochi?.papiro },
     },
@@ -183,6 +185,8 @@ export function titoloPredefinito(evento: Evento, gioco: IdGioco): string {
       return nome ? `Cruci${nome}` : 'Cruciverba'
     case 'bingo':
       return nome ? `Bingo${nome}` : 'Bingo'
+    case 'fantafesta':
+      return nome ? `Fanta${nome}` : 'Fantafesta'
     case 'cashorsara':
       return nome ? `Cash or ${nome}` : 'Cash or Trash'
     case 'papiro':

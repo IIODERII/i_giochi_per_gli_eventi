@@ -44,13 +44,13 @@ export default function GuidaOrganizzatore() {
         'Qui sotto c’è il messaggio con l’accesso per gli invitati: copialo e mandalo nel gruppo. Un solo nome utente e una sola password valgono per tutti.',
     },
   ]
-  if (qualcuno(['cruciverba', 'bingo'])) {
+  if (qualcuno(['cruciverba', 'bingo', 'fantafesta'])) {
     passi.push({
       titolo: 'Lascia che scrivano',
       testo: (
         <>
-          {elenco(['cruciverba', 'bingo'])} si riempiono con quello che scrivono gli invitati. Dai
-          un’occhiata ogni tanto: puoi correggere ed eliminare quello che non va.
+          {elenco(['cruciverba', 'bingo', 'fantafesta'])} si riempiono con quello che scrivono gli
+          invitati. Dai un’occhiata ogni tanto: puoi correggere ed eliminare quello che non va.
         </>
       ),
     })
@@ -94,7 +94,10 @@ export default function GuidaOrganizzatore() {
           Porta i fogli stampati
           {attivi.has('cashorsara') &&
             ` e, per ${titoloGioco(evento, 'cashorsara')}, un portatile da collegare alla TV: la sua guida spiega come condurre il gioco`}
-          . Dopo la festa il sito resta aperto finché l’evento non viene eliminato.
+          .
+          {attivi.has('fantafesta') &&
+            ` Per ${titoloGioco(evento, 'fantafesta')} tieni il telefono a portata di mano: i punti li dai tu, man mano che le cose succedono.`}{' '}
+          Dopo la festa il sito resta aperto finché l’evento non viene eliminato.
         </Testo>
       </SezioneGuida>
     </Guida>

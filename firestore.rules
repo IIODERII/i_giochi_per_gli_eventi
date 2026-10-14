@@ -123,6 +123,59 @@ service cloud.firestore {
         allow delete: if admin(eventoId);
       }
 
+      // --- Fantafesta: bonus, malus e chi li combina --------------------------
+      function regolaValida(d) {
+        return d.testo is string
+          && d.testo.size() >= 3
+          && d.testo.size() <= 80
+          && d.punti is int
+          && d.punti != 0
+          && d.punti >= -100
+          && d.punti <= 100
+          && d.autore is string
+          && d.autore.size() <= 40;
+      }
+
+      match /fantaregole/{id} {
+        allow read: if membro(eventoId);
+        allow create: if membro(eventoId) && regolaValida(request.resource.data);
+        allow update: if admin(eventoId) && regolaValida(request.resource.data);
+        allow delete: if admin(eventoId);
+      }
+
+      function fantagiocatoreValido(d) {
+        return d.nome is string
+          && d.nome.size() >= 2
+          && d.nome.size() <= 30;
+      }
+
+      // gli invitati si iscrivono da soli, solo l'admin rinomina e toglie
+      match /fantagiocatori/{id} {
+        allow read: if membro(eventoId);
+        allow create: if membro(eventoId) && fantagiocatoreValido(request.resource.data);
+        allow update: if admin(eventoId) && fantagiocatoreValido(request.resource.data);
+        allow delete: if admin(eventoId);
+      }
+
+      // I punti li da' solo l'admin, durante la festa.
+      function puntiValidi(d) {
+        return d.giocatoreId is string
+          && d.regolaId is string
+          && d.motivo is string
+          && d.motivo.size() >= 1
+          && d.motivo.size() <= 80
+          && d.punti is int
+          && d.punti != 0
+          && d.punti >= -1000
+          && d.punti <= 1000;
+      }
+
+      match /fantapunti/{id} {
+        allow read: if membro(eventoId);
+        allow create, update: if admin(eventoId) && puntiValidi(request.resource.data);
+        allow delete: if admin(eventoId);
+      }
+
       // --- Cash or ... ------------------------------------------------------
       // Gli oggetti contengono le valutazioni vere: nessuno all'infuori
       // dell'admin puo' nemmeno leggerli. Agli invitati arriva solo quello

@@ -105,6 +105,9 @@ export async function rigeneraPassword(
 const SOTTOCOLLEZIONI = [
   'parole',
   'frasi',
+  'fantaregole',
+  'fantagiocatori',
+  'fantapunti',
   'oggetti',
   'media',
   'papiro',

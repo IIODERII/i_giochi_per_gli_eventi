@@ -3,6 +3,7 @@ import type { Evento, IdGioco } from '../eventi/types'
 import BingoPage from './bingo/BingoPage'
 import RegiaPage from './cashorsara/RegiaPage'
 import CruciverbaPage from './cruciverba/CruciverbaPage'
+import FantafestaPage from './fantafesta/FantafestaPage'
 import PapiroPage from './papiro/PapiroPage'
 
 /**
@@ -41,6 +42,14 @@ export const giochi: Gioco[] = [
       'Scrivi cosa pensi che succederà durante la festa: diventerà una casella delle cartelle del bingo.',
     emoji: '🎲',
     Componente: BingoPage,
+  },
+  {
+    id: 'fantafesta',
+    percorso: 'fantafesta',
+    descrizione:
+      'Il fantacalcio della festa: proponi bonus e malus, entra in gara e scala la classifica a colpi di bravate.',
+    emoji: '🏆',
+    Componente: FantafestaPage,
   },
   {
     id: 'cashorsara',

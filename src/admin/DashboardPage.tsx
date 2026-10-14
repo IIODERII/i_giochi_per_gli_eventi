@@ -210,7 +210,8 @@ function SchedaEvento({ evento, appenaCreato }: { evento: Evento; appenaCreato: 
 
         {conferma !== null && (
           <p className="mt-2 text-xs text-red-700">
-            Si cancellano utenti, parole, previsioni, oggetti e partita. Non si torna indietro.
+            Si cancellano utenti, parole, previsioni, fantafesta, oggetti, papiro e partita. Non si
+            torna indietro.
           </p>
         )}
         {errore && <p className="mt-2 text-xs text-red-700">{errore}</p>}
@@ -219,8 +220,8 @@ function SchedaEvento({ evento, appenaCreato }: { evento: Evento; appenaCreato: 
           <div className="mt-4">
             {appenaCreato && (
               <p className="mb-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
-                Evento creato! Manda all’organizzatore il suo messaggio: dentro trova anche
-                l’accesso per gli invitati.
+                Evento creato! Manda all’organizzatore il messaggio completo: dentro ci sono
+                entrambi gli accessi e la spiegazione di chi può fare cosa.
               </p>
             )}
             <CredenzialiPanel

@@ -17,8 +17,8 @@ export default function GuidaImpostazioni() {
           <li>
             <strong>Chi festeggiamo:</strong> nome e cognome compaiono interi nella home e come
             titolo del papiro; nei titoli dei giochi si usa solo il nome. Con un solo festeggiato i
-            titoli giocano sul suo nome (CruciSara, BingoSara, Cash or Sara); con più festeggiati
-            diventano Cruciverba, Bingo, Cash or Trash.
+            titoli giocano sul suo nome (CruciSara, BingoSara, FantaSara, Cash or Sara); con più
+            festeggiati diventano Cruciverba, Bingo, Fantafesta, Cash or Trash.
           </li>
           <li>
             <strong>Riga in più e data:</strong> facoltative. Compaiono sotto i nomi nella home e
