@@ -131,6 +131,29 @@ service cloud.firestore {
         allow read, write: if admin(eventoId);
       }
 
+      // --- Papiro: lo prepara solo l'admin, e' una sorpresa ------------------
+      // "testo" (versi e impaginazione) e "immagine" (pesa, quindi a parte)
+      function papiroValido(d) {
+        return d.keys().hasOnly(['titolo', 'sottotitolo', 'testo', 'formato', 'colonne',
+                                 'immagine', 'pergamena'])
+          && d.titolo is string && d.titolo.size() <= 80
+          && d.sottotitolo is string && d.sottotitolo.size() <= 160
+          && d.testo is string && d.testo.size() <= 60000
+          && d.formato in ['a3', '50x70', '70x100']
+          && d.colonne is int && d.colonne >= 3 && d.colonne <= 6
+          && d.immagine in ['stretta', 'larga']
+          && d.pergamena is bool;
+      }
+
+      match /papiro/{id} {
+        allow read, delete: if admin(eventoId);
+        allow create, update: if admin(eventoId)
+          && ((id == 'testo' && papiroValido(request.resource.data))
+              || (id == 'immagine'
+                  && request.resource.data.keys().hasOnly(['foto'])
+                  && request.resource.data.foto is string));
+      }
+
       // La foto del presentatore: la usano solo impostazioni e proiezione.
       match /media/{id} {
         allow read, write: if admin(eventoId);

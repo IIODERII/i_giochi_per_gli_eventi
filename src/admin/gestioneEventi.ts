@@ -107,6 +107,7 @@ const SOTTOCOLLEZIONI = [
   'frasi',
   'oggetti',
   'media',
+  'papiro',
   'partita/corrente/giocatori',
   'partita/corrente/risposte',
   'partita',

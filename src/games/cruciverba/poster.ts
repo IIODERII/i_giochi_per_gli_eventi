@@ -1,4 +1,4 @@
-import { MM_PER_PUNTO } from '../shared/stampa'
+import { MM_PER_PUNTO, type Misuratore } from '../shared/stampa'
 import type { Cruciverba } from './generator'
 
 export type FormatoFoglio = 'a4' | 'a3'
@@ -10,6 +10,7 @@ const FOGLI: Record<FormatoFoglio, { larghezza: number; altezza: number }> = {
 }
 
 export { MM_PER_PUNTO }
+export type { Misuratore }
 
 /** Cosa cambia da un evento all'altro nei file da stampare. */
 export interface StileStampa {
@@ -18,13 +19,6 @@ export interface StileStampa {
   colore: string
 }
 
-/**
- * Spezza il testo in righe che stanno dentro la larghezza data (in mm).
- * Ogni formato di uscita ha il suo: jsPDF e il canvas misurano diversamente.
- */
-export interface Misuratore {
-  (testo: string, larghezzaMax: number, dimensione: number): string[]
-}
 
 export interface CellaPoster {
   x: number

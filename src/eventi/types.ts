@@ -10,7 +10,7 @@ export type TipoEvento =
   | 'anniversario'
   | 'festa'
 
-export type IdGioco = 'cruciverba' | 'bingo' | 'cashorsara'
+export type IdGioco = 'cruciverba' | 'bingo' | 'cashorsara' | 'papiro'
 
 export interface ImpostazioniGioco {
   attivo: boolean
@@ -111,6 +111,7 @@ export const GIOCHI_PREDEFINITI: Record<IdGioco, ImpostazioniGioco> = {
   cruciverba: { attivo: true, titolo: '' },
   bingo: { attivo: true, titolo: '' },
   cashorsara: { attivo: true, titolo: '' },
+  papiro: { attivo: true, titolo: '' },
 }
 
 /** I campi di un evento appena creato da Oder, prima che l'admin lo compili. */
@@ -139,6 +140,7 @@ export function normalizzaEvento(id: string, dati: Partial<Evento>): Evento {
       cruciverba: { ...vuoto.giochi.cruciverba, ...dati.giochi?.cruciverba },
       bingo: { ...vuoto.giochi.bingo, ...dati.giochi?.bingo },
       cashorsara: { ...vuoto.giochi.cashorsara, ...dati.giochi?.cashorsara },
+      papiro: { ...vuoto.giochi.papiro, ...dati.giochi?.papiro },
     },
   }
 }
@@ -183,6 +185,8 @@ export function titoloPredefinito(evento: Evento, gioco: IdGioco): string {
       return nome ? `Bingo${nome}` : 'Bingo'
     case 'cashorsara':
       return nome ? `Cash or ${nome}` : 'Cash or Trash'
+    case 'papiro':
+      return nome ? `Il papiro di ${nome}` : 'Il papiro'
   }
 }
 

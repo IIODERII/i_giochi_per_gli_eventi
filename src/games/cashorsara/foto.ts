@@ -9,6 +9,8 @@ interface Opzioni {
    * presentatore): il JPEG le riempirebbe di nero.
    */
   trasparenza?: boolean
+  /** Lato massimo in pixel: il papiro, che si stampa grande, ne vuole di piu'. */
+  latoMassimo?: number
 }
 
 /** I formati da provare, dal piu' leggero: WebP non tutti i browser lo sanno scrivere. */
@@ -26,9 +28,12 @@ function formati(trasparenza: boolean): { tipo: string; qualita: number[] }[] {
  * dentro un documento Firestore. Cosi' non serve Firebase Storage, che sul
  * piano gratuito non e' disponibile.
  */
-export async function comprimiFoto(file: File, { trasparenza = false }: Opzioni = {}): Promise<string> {
+export async function comprimiFoto(
+  file: File,
+  { trasparenza = false, latoMassimo = LATO_MASSIMO }: Opzioni = {},
+): Promise<string> {
   const immagine = await createImageBitmap(file)
-  let lato = LATO_MASSIMO
+  let lato = latoMassimo
 
   for (let tentativo = 0; tentativo < 5; tentativo++) {
     const scala = Math.min(1, lato / Math.max(immagine.width, immagine.height))

@@ -11,6 +11,7 @@ import {
   titoloGioco,
 } from '../eventi/types'
 import { giochiVisibili } from '../games/registry'
+import GuidaOrganizzatore from './GuidaOrganizzatore'
 
 function InPreparazione() {
   const { isAdmin, percorso } = useEvento()
@@ -69,6 +70,8 @@ export default function HomePage() {
       ) : (
         <InPreparazione />
       )}
+
+      {isAdmin && <GuidaOrganizzatore />}
 
       {giochi.length > 0 && (
         <section>

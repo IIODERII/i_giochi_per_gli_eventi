@@ -9,6 +9,7 @@ import { giochi } from '../games/registry'
 import { messaggioErroreFirestore } from '../games/shared/raccolta'
 import { COLORI_PROPOSTI, coloreValido, contrastoConBianco } from './colore'
 import { useEvento } from './eventoContext'
+import GuidaImpostazioni from './GuidaImpostazioni'
 import {
   DETTAGLIO_MAX,
   ELENCO_TIPI,
@@ -136,6 +137,8 @@ export default function ImpostazioniPage() {
           vuoi.
         </p>
       </header>
+
+      <GuidaImpostazioni />
 
       <Sezione titolo="Che festa è?">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">

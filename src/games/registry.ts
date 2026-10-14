@@ -3,6 +3,7 @@ import type { Evento, IdGioco } from '../eventi/types'
 import BingoPage from './bingo/BingoPage'
 import RegiaPage from './cashorsara/RegiaPage'
 import CruciverbaPage from './cruciverba/CruciverbaPage'
+import PapiroPage from './papiro/PapiroPage'
 
 /**
  * Elenco dei giochi del sito. Titolo e attivazione cambiano da un evento
@@ -48,6 +49,15 @@ export const giochi: Gioco[] = [
       'Il gioco della serata: si indovina quanto vale ogni oggetto. Gli invitati entrano dal QR proiettato.',
     emoji: '💎',
     Componente: RegiaPage,
+    soloAdmin: true,
+  },
+  {
+    id: 'papiro',
+    percorso: 'papiro',
+    descrizione:
+      'Il poema goliardico da appendere: un’immagine al centro e i versi in rima tutto intorno, con l’aiuto per le rime.',
+    emoji: '📜',
+    Componente: PapiroPage,
     soloAdmin: true,
   },
 ]

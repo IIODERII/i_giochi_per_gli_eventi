@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useEvento } from '../../eventi/eventoContext'
 import { titoloGioco } from '../../eventi/types'
 import CrosswordPreview from './CrosswordPreview'
+import GuidaCruciverba from './GuidaCruciverba'
 import { generaCruciverba } from './generator'
 import { useParole } from './useParole'
 import WordForm from './WordForm'
@@ -26,6 +27,8 @@ export default function CruciverbaPage() {
           nuova viene incastrata nella griglia insieme alle altre.
         </p>
       </header>
+
+      <GuidaCruciverba />
 
       {errore && (
         <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

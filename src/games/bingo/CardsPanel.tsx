@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import Scelta from '../../components/Scelta'
 import { useEvento } from '../../eventi/eventoContext'
 import AttestatiPanel from './AttestatiPanel'
 import {
@@ -14,36 +15,6 @@ const COLONNE = [3, 4, 5, 6]
 const RIGHE = [2, 3, 4, 5]
 const PER_FOGLIO: CartellePerFoglio[] = [1, 2, 3, 4, 6, 8]
 const ANTEPRIMA_MAX = 4
-
-function Scelta<T extends string | number>({
-  valore,
-  opzioni,
-  onChange,
-  etichetta,
-}: {
-  valore: T
-  opzioni: readonly T[]
-  onChange: (v: T) => void
-  etichetta: (v: T) => string
-}) {
-  return (
-    <div className="flex overflow-hidden rounded-lg border border-primario-300">
-      {opzioni.map((o) => (
-        <button
-          key={o}
-          onClick={() => onChange(o)}
-          className={`flex-1 cursor-pointer px-2.5 py-2 text-xs font-semibold transition ${
-            valore === o
-              ? 'bg-primario-700 text-crema-50'
-              : 'bg-white text-primario-700 hover:bg-primario-50'
-          }`}
-        >
-          {etichetta(o)}
-        </button>
-      ))}
-    </div>
-  )
-}
 
 interface Props {
   frasi: Frase[]

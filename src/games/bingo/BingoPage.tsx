@@ -1,6 +1,7 @@
 import { useEvento } from '../../eventi/eventoContext'
 import { titoloGioco } from '../../eventi/types'
 import CardsPanel from './CardsPanel'
+import GuidaBingo from './GuidaBingo'
 import PhraseForm from './PhraseForm'
 import PhraseList from './PhraseList'
 import { useFrasi } from './useFrasi'
@@ -20,6 +21,8 @@ export default function BingoPage() {
           cinquina, tutta la cartella fa tombola.
         </p>
       </header>
+
+      <GuidaBingo />
 
       {errore && (
         <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

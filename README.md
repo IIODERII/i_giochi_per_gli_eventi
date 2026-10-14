@@ -11,9 +11,18 @@ utenti, i suoi festeggiati e il suo colore.
   festa, e da quelle previsioni nascono le cartelle del bingo da stampare.
 - **Cash or {Nome}**: il gioco della serata. Si proietta un oggetto per volta e
   tutti indovinano quanto vale dal telefono, entrando dal QR senza password.
+- **Il papiro di {Nome}**: il poema goliardico da appendere, con un'immagine al
+  centro e i versi tutto intorno, da scaricare in PDF o PNG (A3, 50×70,
+  70×100). Lo scrive solo l'organizzatore, con un aiuto per rime e metrica che
+  si accende con un interruttore.
+
+Ogni sezione ha in cima una guida che si apre e si chiude ("Come funziona …"):
+agli invitati spiega come partecipare, all'organizzatore anche come preparare,
+stampare e condurre. Nella home l'organizzatore trova la guida al giro completo.
 
 Con un solo festeggiato i titoli giocano sul suo nome (CruciSara, BingoSara,
-Cash or Sara); con più festeggiati diventano Cruciverba, Bingo e Cash or Trash.
+Cash or Sara, Il papiro di Sara); con più festeggiati diventano Cruciverba,
+Bingo, Cash or Trash e Il papiro.
 L'organizzatore può comunque riscriverli.
 
 ## Come funziona
@@ -40,6 +49,7 @@ L'organizzatore può comunque riscriverli.
 | Modificare / eliminare | no | sì | sì |
 | Generare e scaricare cartelle e cartelloni | no | sì | sì |
 | Condurre Cash or … | no | sì | sì |
+| Scrivere e stampare il papiro | no (non lo vedono) | sì | sì |
 | Impostazioni dell'evento | no | sì | sì |
 | Vedere l'accesso per gli invitati | no | sì | sì |
 | Creare ed eliminare eventi, cambiare password | no | no | sì |
@@ -92,6 +102,8 @@ eventi/{eventoId}/parole/...          cruciverba
 eventi/{eventoId}/frasi/...           bingo
 eventi/{eventoId}/oggetti/...         Cash or …: con la valutazione vera, solo admin
 eventi/{eventoId}/media/presentatore  la foto del presentatore, solo admin
+eventi/{eventoId}/papiro/testo        papiro: titolo, versi e impaginazione, solo admin
+eventi/{eventoId}/papiro/immagine     papiro: l'immagine al centro, solo admin
 eventi/{eventoId}/partita/corrente    stato della partita, letto da tutti i telefoni
 eventi/{eventoId}/partita/vetrina     la foto dell'oggetto in gioco
 eventi/{eventoId}/partita/corrente/giocatori/...
@@ -125,24 +137,29 @@ src/
   admin/       dashboard di Oder, creazione eventi, account e credenziali
   auth/        accesso e protezione delle pagine
   eventi/      tipi, contesto dell'evento, colore, impostazioni
-  components/  intestazione, icone, pezzi condivisi
+  components/  intestazione, icone, guide "Come funziona …", pezzi condivisi
   games/
     registry.ts          elenco dei giochi (qui si aggiungono i prossimi)
     shared/              hook Firestore, numeri casuali, nome del giocatore
     cruciverba/          form, elenco, algoritmo, anteprima, PDF e PNG
     bingo/               form, elenco, generatore di cartelle, PDF
     cashorsara/          regia, proiezione, pagina del giocatore, punteggi
+    papiro/              editor dei versi, aiuto rime, impaginazione, PDF e PNG
   pages/       ingresso (smista per ruolo) e home dell'evento
   config.ts    nome del sito, dominio degli utenti, UID di Oder
+public/rime/   il dizionario dell'aiuto rime (vedi sotto)
+scripts/       lo script che lo genera
 ```
 
 ### Aggiungere un gioco nuovo
 
 1. Creare `src/games/<nome>/` con la sua pagina; per la parte dati basta
    `useRaccolta('eventi/<id evento>/<collezione>')` da
-   `src/games/shared/raccolta.ts`.
+   `src/games/shared/raccolta.ts`. In cima alla pagina una guida con
+   `Guida` da `src/components/Guida.tsx`, come negli altri giochi.
 2. Aggiungere l'id a `IdGioco` e a `GIOCHI_PREDEFINITI` in
-   `src/eventi/types.ts`, il titolo automatico in `titoloPredefinito`, e una
+   `src/eventi/types.ts` (e in `normalizzaEvento`), il titolo automatico in
+   `titoloPredefinito`, e una
    voce in `src/games/registry.ts`: rotte, menu, tessere della home e
    impostazioni si aggiornano da sole.
 3. Aggiungere le regole della nuova collezione dentro `match /eventi/{eventoId}`
@@ -229,6 +246,44 @@ chi entra a metà partita o corregge una puntata non manda niente fuori sincrono
 Le foto vengono ridotte nel browser prima di essere salvate, perché Firebase
 Storage non è disponibile sul piano gratuito. Quella del presentatore conserva
 la trasparenza, così una foto scontornata resta scontornata.
+
+## Come funziona il papiro
+
+- `impaginazione.ts` calcola in millimetri titolo, cornice, posto dell'immagine
+  e colonne. L'immagine occupa le colonne centrali (una o due, tre o quattro se
+  "larga"), centrata in verticale: in quelle colonne i versi si interrompono
+  sopra e riprendono sotto. Le strofe non si spezzano fra due colonne, a meno
+  che una sola sia più lunga di una colonna.
+- Il carattere si sceglie da solo: il più grande con cui ci sta tutto e al
+  massimo il 15% dei versi va a capo (senza scendere sotto una soglia di
+  leggibilità che cresce con il formato); se non basta, il più grande con cui
+  ci sta tutto, fino a 6 punti. Un testo corto viene distribuito su tutte le
+  colonne invece di riempire solo le prime.
+- Anteprima e PNG disegnano sul canvas con il Cormorant del sito
+  (`disegno.ts`); il PDF (`exportPdf.ts`) è vettoriale, in Times, quindi gli a
+  capo possono cambiare di poco. Il PNG scende di risoluzione sui formati
+  grandi per restare sotto i 16 milioni di pixel che Safari sul telefono regge.
+- Il testo si salva da solo un secondo e mezzo dopo l'ultima modifica, letto
+  una volta sola all'apertura: niente aggiornamenti dal database che spostino il
+  cursore. L'immagine (fino a 2000 pixel di lato) sta in un documento a parte.
+
+### L'aiuto rime
+
+Si accende con un interruttore nella pagina, ricordato nel browser. Tutto gira
+nel browser, senza servizi esterni:
+
+- `rime.ts` ricava la rima di una parola (dalla vocale accentata alla fine),
+  conta le sillabe metriche di un verso (con la sinalefe) e assegna le lettere
+  dello schema dentro ogni strofa. L'italiano scritto non segna l'accento, quindi
+  le parole senza accento in fondo sono trattate come piane: sulle sdrucciole
+  le rime proposte sono assonanze. Per questo il sito parla di sillabe "circa".
+- Il dizionario `public/rime/parole.txt` (77.000 parole, circa 240 KB
+  compressi) si scarica solo quando l'aiuto è acceso. È ordinato dalla parola
+  più usata, così le rime più comuni escono per prime. Lo genera
+  `node scripts/dizionario-rime.mjs` unendo
+  [paroleitaliane](https://github.com/napolux/paroleitaliane) (MIT) e le
+  frequenze di [FrequencyWords](https://github.com/hermitdave/FrequencyWords)
+  (CC BY-SA 4.0); licenze e modifiche in `public/rime/LICENZE.txt`.
 
 ## Pubblicazione
 
